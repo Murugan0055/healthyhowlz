@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { api } from '../services/api';
 
-export default function MembersPage({ onOpenNewMember, onRenewMember, onCheckinResult }) {
+export default function MembersPage({ currentGymId, currentGym, onOpenNewMember, onRenewMember, onCheckinResult }) {
   const [members, setMembers] = useState([]);
   const [trainers, setTrainers] = useState([]);
   const [statusFilter, setStatusFilter] = useState('all');
@@ -84,7 +84,7 @@ export default function MembersPage({ onOpenNewMember, onRenewMember, onCheckinR
 
   useEffect(() => {
     fetchMembers();
-  }, [statusFilter, search]);
+  }, [statusFilter, search, currentGymId]);
 
   const handleOpenMemberDetail = async (mem) => {
     setSelectedMemberDetail(mem);
@@ -139,7 +139,7 @@ export default function MembersPage({ onOpenNewMember, onRenewMember, onCheckinR
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-widest uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-              Member Directory
+              {currentGym?.name || 'Member Directory'}
             </span>
             <span className="text-xs text-slate-400">Total {members.length} records</span>
           </div>

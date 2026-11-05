@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b0f17" />
+      <stop offset="50%" stop-color="#101726" />
+      <stop offset="100%" stop-color="#070a10" />
+    </linearGradient>
+    <linearGradient id="glowGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34d399" />
+      <stop offset="100%" stop-color="#059669" />
+    </linearGradient>
+    <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </linearGradient>
+    <filter id="neonGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background Canvas -->
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad)" />
+  <rect width="504" height="504" x="4" y="4" rx="108" fill="none" stroke="url(#glowGrad)" stroke-width="4" stroke-opacity="0.4" />
+
+  <!-- Shield Crest Outer Ring -->
+  <path d="M 256 64 L 384 128 L 384 276 C 384 356 328 416 256 448 C 184 416 128 356 128 276 L 128 128 Z"
+        fill="url(#shieldGrad)" stroke="#10b981" stroke-width="6" stroke-linejoin="round" />
+
+  <!-- Stylized Geometric HealthyHowlz Wolf / Alpha Head -->
+  <!-- Forehead and ears -->
+  <path d="M 256 120 L 310 170 L 370 120 L 340 220 L 310 210 L 256 260 L 202 210 L 172 220 L 142 120 L 202 170 Z"
+        fill="#10b981" opacity="0.95" />
+
+  <!-- Snout / Chin -->
+  <path d="M 256 260 L 300 280 L 280 340 L 256 360 L 232 340 L 212 280 Z"
+        fill="url(#glowGrad)" />
+
+  <!-- Piercing Eyes (Glowing Yellow/Emerald) -->
+  <polygon points="214,215 240,225 218,230" fill="#38bdf8" filter="url(#neonGlow)" />
+  <polygon points="298,215 272,225 294,230" fill="#38bdf8" filter="url(#neonGlow)" />
+
+  <!-- Nose Tip -->
+  <polygon points="256,335 264,324 248,324" fill="#0b0f17" />
+
+  <!-- Dumbbell / Iron Core Accent in Jaw -->
+  <rect x="220" y="375" width="72" height="8" rx="4" fill="#34d399" filter="url(#neonGlow)" />
+  <rect x="210" y="367" width="12" height="24" rx="4" fill="#10b981" />
+  <rect x="290" y="367" width="12" height="24" rx="4" fill="#10b981" />
+
+  <!-- Brand Signature Monogram Text -->
+  <text x="256" y="475" text-anchor="middle" font-family="'Outfit', 'Plus Jakarta Sans', system-ui, sans-serif" font-weight="900" font-size="28" letter-spacing="4" fill="#10b981">HEALTHYHOWLZ</text>
+</svg>
+

@@ -27,6 +27,29 @@ export async function getDb() {
 
 async function initSchema(db) {
   await db.exec(`
+    -- SaaS Gyms (Tenants)
+    CREATE TABLE IF NOT EXISTS gyms (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      slug TEXT UNIQUE NOT NULL,
+      owner_id TEXT NOT NULL,
+      owner_name TEXT NOT NULL,
+      phone TEXT,
+      email TEXT,
+      address TEXT,
+      city TEXT NOT NULL DEFAULT 'Gudiyatham',
+      state TEXT DEFAULT 'Tamil Nadu',
+      pincode TEXT,
+      gstin TEXT,
+      status TEXT NOT NULL DEFAULT 'active', -- 'active', 'trial', 'suspended'
+      subscription_tier TEXT NOT NULL DEFAULT 'pro_growth', -- 'starter', 'pro_growth', 'enterprise'
+      monthly_fee REAL NOT NULL DEFAULT 2499.0,
+      billing_cycle TEXT DEFAULT 'monthly',
+      valid_until DATE,
+      kiosk_pin TEXT DEFAULT '1234',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
     -- Staff & Officers
     CREATE TABLE IF NOT EXISTS staff (
       id TEXT PRIMARY KEY,
@@ -382,6 +405,24 @@ async function initSchema(db) {
   await ensureColumn(db, 'members', 'pt_sessions_total', 'INTEGER DEFAULT 0');
   await ensureColumn(db, 'members', 'pt_sessions_remaining', 'INTEGER DEFAULT 0');
   await ensureColumn(db, 'members', 'pt_session_pin', "TEXT DEFAULT '4821'");
+
+  // Multi-tenant SaaS columns (gym_id)
+  await ensureColumn(db, 'staff', 'gym_id', "TEXT DEFAULT 'gym-gudiyatham'");
+  await ensureColumn(db, 'members', 'gym_id', "TEXT DEFAULT 'gym-gudiyatham'");
+  await ensureColumn(db, 'membership_plans', 'gym_id', "TEXT DEFAULT 'gym-gudiyatham'");
+  await ensureColumn(db, 'lockers', 'gym_id', "TEXT DEFAULT 'gym-gudiyatham'");
+  await ensureColumn(db, 'checkins', 'gym_id', "TEXT DEFAULT 'gym-gudiyatham'");
+  await ensureColumn(db, 'leads', 'gym_id', "TEXT DEFAULT 'gym-gudiyatham'");
+  await ensureColumn(db, 'invoices', 'gym_id', "TEXT DEFAULT 'gym-gudiyatham'");
+  await ensureColumn(db, 'expenses', 'gym_id', "TEXT DEFAULT 'gym-gudiyatham'");
+  await ensureColumn(db, 'pos_products', 'gym_id', "TEXT DEFAULT 'gym-gudiyatham'");
+  await ensureColumn(db, 'pos_sales', 'gym_id', "TEXT DEFAULT 'gym-gudiyatham'");
+  await ensureColumn(db, 'workout_routines', 'gym_id', "TEXT DEFAULT 'gym-gudiyatham'");
+  await ensureColumn(db, 'diet_plans', 'gym_id', "TEXT DEFAULT 'gym-gudiyatham'");
+  await ensureColumn(db, 'pt_sessions', 'gym_id', "TEXT DEFAULT 'gym-gudiyatham'");
+  await ensureColumn(db, 'floor_checkins', 'gym_id', "TEXT DEFAULT 'gym-gudiyatham'");
+  await ensureColumn(db, 'gym_notices', 'gym_id', "TEXT DEFAULT 'gym-gudiyatham'");
+  await ensureColumn(db, 'cash_drawer_reconciliations', 'gym_id', "TEXT DEFAULT 'gym-gudiyatham'");
 }
 
 async function ensureColumn(db, table, column, definition) {

@@ -1,5 +1,24 @@
 const BASE_URL = '/api';
 
+export const getActiveGymId = () => {
+  try {
+    return localStorage.getItem('healthyhowlz_active_gym_id') || 'gym-gudiyatham';
+  } catch (e) {
+    return 'gym-gudiyatham';
+  }
+};
+
+// Auto-inject x-gym-id tenant header into all API requests
+const originalFetch = window.fetch ? window.fetch.bind(window) : fetch;
+const tenantFetch = (url, options = {}) => {
+  const headers = new Headers(options.headers || {});
+  if (!headers.has('x-gym-id')) {
+    headers.set('x-gym-id', getActiveGymId());
+  }
+  return originalFetch(url, { ...options, headers });
+};
+const fetch = tenantFetch;
+
 export const api = {
   // Kiosk & Attendance
   scanQr: async (token) => {
@@ -237,7 +256,26 @@ export const api = {
     return await res.json();
   },
 
-  // Staff & Authentication
+  // Unified Authentication & Session Management
+  unifiedLogin: async (identifier, secret, deviceFingerprint = null, deviceName = null) => {
+    const res = await fetch(`${BASE_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifier, secret, deviceFingerprint, deviceName })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Authentication failed');
+    }
+    return data;
+  },
+
+  getMe: async () => {
+    const res = await fetch(`${BASE_URL}/auth/me`);
+    return await res.json();
+  },
+
+  // Staff & Authentication (Backward Compatibility)
   loginStaff: async (identifier, secret) => {
     const res = await fetch(`${BASE_URL}/staff/login`, {
       method: 'POST',
@@ -247,8 +285,9 @@ export const api = {
     return await res.json();
   },
 
-  getStaff: async () => {
-    const res = await fetch(`${BASE_URL}/staff`);
+  getStaff: async (gymId = 'all') => {
+    const query = gymId && gymId !== 'all' ? `?gymId=${gymId}` : '';
+    const res = await fetch(`${BASE_URL}/staff${query}`);
     return await res.json();
   },
 
@@ -536,6 +575,76 @@ export const api = {
 
   getClientPtPass: async (memberId) => {
     const res = await fetch(`${BASE_URL}/client/pt-pass/${memberId}`);
+    return await res.json();
+  },
+
+  // HealthyHowlz Platform & Multi-Tenant Gym API
+  getPlatformStats: async () => {
+    const res = await fetch(`${BASE_URL}/platform/stats`);
+    return await res.json();
+  },
+
+  getPlatformGyms: async () => {
+    const res = await fetch(`${BASE_URL}/platform/gyms`);
+    return await res.json();
+  },
+
+  provisionGym: async (payload) => {
+    const res = await fetch(`${BASE_URL}/platform/gyms`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to provision gym');
+    return data;
+  },
+
+  updateGymStatus: async (id, status) => {
+    const res = await fetch(`${BASE_URL}/platform/gyms/${id}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to update gym status');
+    return data;
+  },
+
+  updateGym: async (id, payload) => {
+    const res = await fetch(`${BASE_URL}/platform/gyms/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to update gym');
+    return data;
+  },
+
+  deleteGym: async (id) => {
+    const res = await fetch(`${BASE_URL}/platform/gyms/${id}`, {
+      method: 'DELETE'
+    });
+    return await res.json();
+  },
+
+  getAccessibleGyms: async (ownerId = 'staff-owner', role = 'owner') => {
+    const res = await fetch(`${BASE_URL}/gyms/accessible?ownerId=${ownerId}&role=${role}`);
+    return await res.json();
+  },
+
+  getCurrentGym: async () => {
+    const res = await fetch(`${BASE_URL}/gyms/current`);
+    return await res.json();
+  },
+
+  updateCurrentGym: async (payload) => {
+    const res = await fetch(`${BASE_URL}/gyms/current`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
     return await res.json();
   }
 };

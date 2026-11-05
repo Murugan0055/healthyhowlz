@@ -1,29 +1,35 @@
 import { getDb } from '../db/database.js';
 import { v4 as uuidv4 } from 'uuid';
 
-export async function getRevenueDashboard() {
+export async function getRevenueDashboard(gymId) {
   const db = await getDb();
+  const filterGym = gymId && gymId !== 'all';
+  const gymClause = filterGym ? ' AND gym_id = ?' : '';
+  const gymParams = filterGym ? [gymId] : [];
 
   // 1. Real-time counters
   // Today's Collections
   const todayRow = await db.get(
     `SELECT COALESCE(SUM(grand_total), 0) as total, COUNT(*) as count 
      FROM invoices 
-     WHERE date(created_at) = date('now', 'localtime') AND status = 'paid'`
+     WHERE date(created_at) = date('now', 'localtime') AND status = 'paid'${gymClause}`,
+    gymParams
   );
 
   // Month-to-Date (MTD)
   const mtdRow = await db.get(
     `SELECT COALESCE(SUM(grand_total), 0) as total, COUNT(*) as count 
      FROM invoices 
-     WHERE strftime('%Y-%m', created_at) = strftime('%Y-%m', 'now', 'localtime') AND status = 'paid'`
+     WHERE strftime('%Y-%m', created_at) = strftime('%Y-%m', 'now', 'localtime') AND status = 'paid'${gymClause}`,
+    gymParams
   );
 
   // Year-to-Date (YTD)
   const ytdRow = await db.get(
     `SELECT COALESCE(SUM(grand_total), 0) as total, COUNT(*) as count 
      FROM invoices 
-     WHERE strftime('%Y', created_at) = strftime('%Y', 'now', 'localtime') AND status = 'paid'`
+     WHERE strftime('%Y', created_at) = strftime('%Y', 'now', 'localtime') AND status = 'paid'${gymClause}`,
+    gymParams
   );
 
   // Payment Method Breakdown (Today & MTD)
@@ -32,8 +38,9 @@ export async function getRevenueDashboard() {
             COALESCE(SUM(grand_total), 0) as total_amount, 
             COUNT(*) as invoice_count 
      FROM invoices 
-     WHERE strftime('%Y-%m', created_at) = strftime('%Y-%m', 'now', 'localtime') AND status = 'paid'
-     GROUP BY payment_method`
+     WHERE strftime('%Y-%m', created_at) = strftime('%Y-%m', 'now', 'localtime') AND status = 'paid'${gymClause}
+     GROUP BY payment_method`,
+    gymParams
   );
 
   // Category Breakdown (Membership vs POS Retail vs Locker vs PT)
@@ -42,13 +49,16 @@ export async function getRevenueDashboard() {
             COALESCE(SUM(grand_total), 0) as total_amount, 
             COUNT(*) as count 
      FROM invoices 
-     WHERE strftime('%Y-%m', created_at) = strftime('%Y-%m', 'now', 'localtime') AND status = 'paid'
-     GROUP BY item_type`
+     WHERE strftime('%Y-%m', created_at) = strftime('%Y-%m', 'now', 'localtime') AND status = 'paid'${gymClause}
+     GROUP BY item_type`,
+    gymParams
   );
 
   // Active Member Count & ARPM (Average Revenue Per Member)
+  const memberGymClause = filterGym ? ' AND gym_id = ?' : '';
   const activeMembersRow = await db.get(
-    "SELECT COUNT(*) as count FROM members WHERE status IN ('active', 'grace')"
+    `SELECT COUNT(*) as count FROM members WHERE status IN ('active', 'grace')${memberGymClause}`,
+    gymParams
   );
   const activeMembersCount = activeMembersRow?.count || 1;
   const arpm = Math.round((mtdRow?.total || 0) / activeMembersCount);
@@ -59,7 +69,8 @@ export async function getRevenueDashboard() {
      FROM invoices 
      WHERE date(created_at) = date('now', 'localtime') 
        AND payment_method = 'cash' 
-       AND status = 'paid'`
+       AND status = 'paid'${gymClause}`,
+    gymParams
   );
 
   return {
@@ -79,18 +90,20 @@ export async function getRevenueDashboard() {
   };
 }
 
-export async function submitCashDrawerReconciliation({ staffId, staffName, physicalCashCounted, notes }) {
+export async function submitCashDrawerReconciliation({ staffId, staffName, physicalCashCounted, notes, gymId = 'gym-gudiyatham' }) {
   const db = await getDb();
   const id = uuidv4();
   const dateStr = new Date().toISOString().split('T')[0];
 
-  // Calculate actual system cash recorded today
+  // Calculate actual system cash recorded today for this gym
   const cashRow = await db.get(
     `SELECT COALESCE(SUM(grand_total), 0) as system_cash 
      FROM invoices 
      WHERE date(created_at) = date('now', 'localtime') 
        AND payment_method = 'cash' 
-       AND status = 'paid'`
+       AND status = 'paid'
+       AND gym_id = ?`,
+    [gymId]
   );
 
   const systemCashExpected = cashRow ? cashRow.system_cash : 0;
@@ -104,9 +117,9 @@ export async function submitCashDrawerReconciliation({ staffId, staffName, physi
   }
 
   await db.run(
-    `INSERT INTO cash_drawer_reconciliations (id, reconciliation_date, staff_id, staff_name, system_cash_expected, physical_cash_counted, discrepancy, status, notes, submitted_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))`,
-    [id, dateStr, staffId, staffName, systemCashExpected, physicalCashCounted, discrepancy, status, notes || '']
+    `INSERT INTO cash_drawer_reconciliations (id, reconciliation_date, staff_id, staff_name, system_cash_expected, physical_cash_counted, discrepancy, status, notes, gym_id, submitted_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))`,
+    [id, dateStr, staffId, staffName, systemCashExpected, physicalCashCounted, discrepancy, status, notes || '', gymId]
   );
 
   return {
@@ -116,22 +129,26 @@ export async function submitCashDrawerReconciliation({ staffId, staffName, physi
     physicalCashCounted,
     discrepancy,
     status,
-    notes
+    notes,
+    gymId
   };
 }
 
-export async function getCashReconciliationHistory(limit = 10) {
+export async function getCashReconciliationHistory(limit = 10, gymId) {
   const db = await getDb();
-  return await db.all(
-    `SELECT * FROM cash_drawer_reconciliations 
-     ORDER BY submitted_at DESC 
-     LIMIT ?`,
-    [limit]
-  );
+  const filterGym = gymId && gymId !== 'all';
+  const query = filterGym 
+    ? `SELECT * FROM cash_drawer_reconciliations WHERE gym_id = ? ORDER BY submitted_at DESC LIMIT ?`
+    : `SELECT * FROM cash_drawer_reconciliations ORDER BY submitted_at DESC LIMIT ?`;
+  const params = filterGym ? [gymId, limit] : [limit];
+  return await db.all(query, params);
 }
 
-export async function getProjectedCashFlow() {
+export async function getProjectedCashFlow(gymId) {
   const db = await getDb();
+  const filterGym = gymId && gymId !== 'all';
+  const gymClause = filterGym ? ' AND m.gym_id = ?' : '';
+  const gymParams = filterGym ? [gymId] : [];
 
   // Find expiring memberships in next 7, 14, 30 days
   const query = `
@@ -143,10 +160,11 @@ export async function getProjectedCashFlow() {
     WHERE m.status IN ('active', 'grace')
       AND julianday(m.expiry_date) - julianday('now', 'localtime') <= 30
       AND julianday(m.expiry_date) - julianday('now', 'localtime') >= -2
+      ${gymClause}
     ORDER BY m.expiry_date ASC
   `;
 
-  const expiringMembers = await db.all(query);
+  const expiringMembers = await db.all(query, gymParams);
 
   const next7Days = [];
   const next14Days = [];

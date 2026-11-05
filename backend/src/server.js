@@ -21,6 +21,9 @@ import settingRoutes from './routes/settingRoutes.js';
 import clientRoutes from './routes/clientRoutes.js';
 import expenseRoutes from './routes/expenseRoutes.js';
 import trainerRoutes from './routes/trainerRoutes.js';
+import platformRoutes from './routes/platformRoutes.js';
+import gymRoutes from './routes/gymRoutes.js';
+import authRoutes from './routes/authRoutes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -57,6 +60,9 @@ app.use('/api/settings', settingRoutes);
 app.use('/api/client', clientRoutes);
 app.use('/api/expenses', expenseRoutes);
 app.use('/api/trainer', trainerRoutes);
+app.use('/api/platform', platformRoutes);
+app.use('/api/gyms', gymRoutes);
+app.use('/api/auth', authRoutes);
 
 // Serve static frontend build if dist exists
 const frontendDistPath = path.resolve(__dirname, '../../frontend/dist');

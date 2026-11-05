@@ -44,7 +44,7 @@ export default function TrainerLogin({ onSwitchToAdmin, onSwitchToClient }) {
             Trainer & Floor Coach Portal
           </h1>
           <p className="text-xs text-emerald-400 font-semibold tracking-wider uppercase mt-1">
-            ELITE FITNESS CLUB • GUDIYATHAM
+            HEALTHYHOWLZ • COACH OPERATING SYSTEM
           </p>
           <p className="text-xs text-slate-400 mt-2">
             Client floor check-ins, anti-fraud PT verification & commission tracking

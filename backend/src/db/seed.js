@@ -12,85 +12,276 @@ export async function seedDatabase() {
   // 1. Staff & Admins Roster
   const staffMembers = [
     {
+      id: 'staff-platform-admin',
+      name: 'HealthyHowlz HQ Admin',
+      role: 'platform_admin',
+      phone: '8888888888',
+      email: 'hq@healthyhowlz.com',
+      password_hash: hashedPw,
+      security_pin: '8888',
+      commission_rate: 0.0,
+      gym_id: 'gym-gudiyatham'
+    },
+    {
       id: 'staff-super-admin',
       name: 'Super Admin (Root System)',
       role: 'super_admin',
       phone: '9999999999',
-      email: 'superadmin@elitegymgudiyatham.com',
+      email: 'superadmin@healthyhowlz.com',
       password_hash: hashedPw,
       security_pin: '9999',
-      commission_rate: 0.0
+      commission_rate: 0.0,
+      gym_id: 'gym-gudiyatham'
     },
     {
       id: 'staff-owner',
-      name: 'Karthik Raja (Owner)',
+      name: 'Karthik Raja (Multi-Gym Owner)',
       role: 'owner',
       phone: '9840123456',
-      email: 'owner@elitegymgudiyatham.com',
+      email: 'owner@healthyhowlz.com',
       password_hash: hashedPw,
       security_pin: '1111',
-      commission_rate: 10.0
+      commission_rate: 10.0,
+      gym_id: 'gym-gudiyatham'
+    },
+    {
+      id: 'staff-owner-2',
+      name: 'Suresh Natarajan (Owner - Coimbatore)',
+      role: 'owner',
+      phone: '9840155667',
+      email: 'suresh@healthyhowlz.com',
+      password_hash: hashedPw,
+      security_pin: '3333',
+      commission_rate: 10.0,
+      gym_id: 'gym-coimbatore'
+    },
+    {
+      id: 'staff-owner-3',
+      name: 'Ramesh Patel (Owner - Bangalore)',
+      role: 'owner',
+      phone: '9840133445',
+      email: 'ramesh@healthyhowlz.com',
+      password_hash: hashedPw,
+      security_pin: '4444',
+      commission_rate: 10.0,
+      gym_id: 'gym-bangalore'
     },
     {
       id: 'staff-manager',
       name: 'Venkatesh Rao (General Manager)',
       role: 'manager',
       phone: '9840123460',
-      email: 'manager@elitegymgudiyatham.com',
+      email: 'manager@healthyhowlz.com',
       password_hash: hashedPw,
       security_pin: '2222',
-      commission_rate: 7.5
+      commission_rate: 7.5,
+      gym_id: 'gym-gudiyatham'
     },
     {
       id: 'staff-front-desk',
       name: 'Priya V (Front Desk Admin)',
       role: 'admin',
       phone: '9840123457',
-      email: 'reception@elitegymgudiyatham.com',
+      email: 'reception@healthyhowlz.com',
       password_hash: hashedPw,
       security_pin: '1234', // Default Front Desk Officer PIN
-      commission_rate: 5.0
+      commission_rate: 5.0,
+      gym_id: 'gym-gudiyatham'
     },
     {
       id: 'staff-trainer-1',
       name: 'Murugan S (Head Coach)',
       role: 'trainer',
       phone: '9840123458',
-      email: 'murugan@elitegymgudiyatham.com',
+      email: 'murugan@healthyhowlz.com',
       password_hash: hashedPw,
       security_pin: '5555',
       commission_rate: 20.0,
-      base_salary: 18000.0
+      base_salary: 18000.0,
+      gym_id: 'gym-gudiyatham'
     },
     {
       id: 'staff-trainer-2',
       name: 'Dinesh Kumar (Strength Coach)',
       role: 'trainer',
       phone: '9840123459',
-      email: 'dinesh@elitegymgudiyatham.com',
+      email: 'dinesh@healthyhowlz.com',
       password_hash: hashedPw,
       security_pin: '7777',
       commission_rate: 18.0,
-      base_salary: 15000.0
+      base_salary: 15000.0,
+      gym_id: 'gym-gudiyatham'
+    },
+    {
+      id: 'staff-trainer-vel',
+      name: 'Karthik V (Vellore Head Coach)',
+      role: 'trainer',
+      phone: '9840199010',
+      email: 'karthik.vel@healthyhowlz.com',
+      password_hash: hashedPw,
+      security_pin: '6666',
+      commission_rate: 20.0,
+      base_salary: 18000.0,
+      gym_id: 'gym-vellore'
+    },
+    {
+      id: 'staff-trainer-chn',
+      name: 'Arun Prasad (Chennai Strength Coach)',
+      role: 'trainer',
+      phone: '9840188010',
+      email: 'arun.chn@healthyhowlz.com',
+      password_hash: hashedPw,
+      security_pin: '8888',
+      commission_rate: 22.0,
+      base_salary: 22000.0,
+      gym_id: 'gym-chennai'
     }
   ];
 
   for (const s of staffMembers) {
     const existing = await db.get('SELECT id FROM staff WHERE id = ?', [s.id]);
     const baseSal = s.base_salary || 15000.0;
+    const gymId = s.gym_id || 'gym-gudiyatham';
     if (!existing) {
       await db.run(
-        `INSERT INTO staff (id, name, role, phone, email, password_hash, security_pin, commission_rate, base_salary, is_active)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
-        [s.id, s.name, s.role, s.phone, s.email, s.password_hash, s.security_pin, s.commission_rate, baseSal]
+        `INSERT INTO staff (id, name, role, phone, email, password_hash, security_pin, commission_rate, base_salary, gym_id, is_active)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+        [s.id, s.name, s.role, s.phone, s.email, s.password_hash, s.security_pin, s.commission_rate, baseSal, gymId]
       );
     } else {
       await db.run(
-        `UPDATE staff SET name = ?, role = ?, phone = ?, email = ?, security_pin = ?, commission_rate = ?, base_salary = ? WHERE id = ?`,
-        [s.name, s.role, s.phone, s.email, s.security_pin, s.commission_rate, baseSal, s.id]
+        `UPDATE staff SET name = ?, role = ?, phone = ?, email = ?, security_pin = ?, commission_rate = ?, base_salary = ?, gym_id = ? WHERE id = ?`,
+        [s.name, s.role, s.phone, s.email, s.security_pin, s.commission_rate, baseSal, gymId, s.id]
       );
     }
   }
+
+  // 1b. Multi-Tenant SaaS Gyms (Tenants)
+  // Karthik Raja (staff-owner) owns 3 gyms: Gudiyatham, Vellore, and Chennai!
+  const gymsList = [
+    {
+      id: 'gym-gudiyatham',
+      name: 'HealthyHowlz Elite (Gudiyatham HQ)',
+      slug: 'gudiyatham',
+      owner_id: 'staff-owner',
+      owner_name: 'Karthik Raja',
+      phone: '+91 98401 23456',
+      email: 'gudiyatham@healthyhowlz.com',
+      address: 'Plot 14, Katpadi Main Road, Gudiyatham',
+      city: 'Gudiyatham',
+      state: 'Tamil Nadu',
+      pincode: '632602',
+      gstin: '33AAAAE1234M1Z5',
+      status: 'active',
+      subscription_tier: 'starter',
+      monthly_fee: 899.0,
+      kiosk_pin: '1234'
+    },
+    {
+      id: 'gym-vellore',
+      name: 'HealthyHowlz Club (Vellore East)',
+      slug: 'vellore',
+      owner_id: 'staff-owner',
+      owner_name: 'Karthik Raja',
+      phone: '+91 98401 98765',
+      email: 'vellore@healthyhowlz.com',
+      address: '88, Gandhi Road, Near VIT, Vellore',
+      city: 'Vellore',
+      state: 'Tamil Nadu',
+      pincode: '632014',
+      gstin: '33BBBE1234M2Z6',
+      status: 'active',
+      subscription_tier: 'pro_growth',
+      monthly_fee: 2499.0,
+      kiosk_pin: '2345'
+    },
+    {
+      id: 'gym-chennai',
+      name: 'HealthyHowlz Arena (Chennai Anna Nagar)',
+      slug: 'chennai',
+      owner_id: 'staff-owner',
+      owner_name: 'Karthik Raja',
+      phone: '+91 98401 11223',
+      email: 'chennai@healthyhowlz.com',
+      address: '2nd Avenue, Anna Nagar West, Chennai',
+      city: 'Chennai',
+      state: 'Tamil Nadu',
+      pincode: '600040',
+      gstin: '33CCCCE1234M3Z7',
+      status: 'active',
+      subscription_tier: 'enterprise',
+      monthly_fee: 4999.0,
+      kiosk_pin: '3456'
+    },
+    {
+      id: 'gym-coimbatore',
+      name: 'HealthyHowlz Studio (Coimbatore RS Puram)',
+      slug: 'coimbatore',
+      owner_id: 'staff-owner-2',
+      owner_name: 'Suresh Natarajan',
+      phone: '+91 98401 55667',
+      email: 'coimbatore@healthyhowlz.com',
+      address: 'DB Road, RS Puram, Coimbatore',
+      city: 'Coimbatore',
+      state: 'Tamil Nadu',
+      pincode: '641002',
+      gstin: '33DDDDE1234M4Z8',
+      status: 'trial',
+      subscription_tier: 'pro_growth',
+      monthly_fee: 2499.0,
+      kiosk_pin: '4567'
+    },
+    {
+      id: 'gym-bangalore',
+      name: 'HealthyHowlz Powerhouse (Bangalore Koramangala)',
+      slug: 'bangalore',
+      owner_id: 'staff-owner-3',
+      owner_name: 'Ramesh Patel',
+      phone: '+91 98401 33445',
+      email: 'bangalore@healthyhowlz.com',
+      address: '80 Feet Road, 4th Block, Koramangala, Bangalore',
+      city: 'Bangalore',
+      state: 'Karnataka',
+      pincode: '560034',
+      gstin: '29EEEEE1234M5Z9',
+      status: 'active',
+      subscription_tier: 'enterprise',
+      monthly_fee: 4999.0,
+      kiosk_pin: '5678'
+    }
+  ];
+
+  for (const g of gymsList) {
+    const existing = await db.get('SELECT id FROM gyms WHERE id = ?', [g.id]);
+    if (!existing) {
+      await db.run(
+        `INSERT INTO gyms (id, name, slug, owner_id, owner_name, phone, email, address, city, state, pincode, gstin, status, subscription_tier, monthly_fee, kiosk_pin)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [g.id, g.name, g.slug, g.owner_id, g.owner_name, g.phone, g.email, g.address, g.city, g.state, g.pincode, g.gstin, g.status, g.subscription_tier, g.monthly_fee, g.kiosk_pin]
+      );
+    } else {
+      await db.run(
+        `UPDATE gyms SET name = ?, slug = ?, owner_id = ?, owner_name = ?, phone = ?, email = ?, address = ?, city = ?, state = ?, pincode = ?, gstin = ?, status = ?, subscription_tier = ?, monthly_fee = ?, kiosk_pin = ? WHERE id = ?`,
+        [g.name, g.slug, g.owner_id, g.owner_name, g.phone, g.email, g.address, g.city, g.state, g.pincode, g.gstin, g.status, g.subscription_tier, g.monthly_fee, g.kiosk_pin, g.id]
+      );
+    }
+  }
+
+  // Ensure default gym_id for all existing legacy rows
+  await db.run(`UPDATE members SET gym_id = 'gym-gudiyatham' WHERE gym_id IS NULL OR gym_id = ''`);
+  await db.run(`UPDATE checkins SET gym_id = 'gym-gudiyatham' WHERE gym_id IS NULL OR gym_id = ''`);
+  await db.run(`UPDATE leads SET gym_id = 'gym-gudiyatham' WHERE gym_id IS NULL OR gym_id = ''`);
+  await db.run(`UPDATE invoices SET gym_id = 'gym-gudiyatham' WHERE gym_id IS NULL OR gym_id = ''`);
+  await db.run(`UPDATE expenses SET gym_id = 'gym-gudiyatham' WHERE gym_id IS NULL OR gym_id = ''`);
+  await db.run(`UPDATE pos_products SET gym_id = 'gym-gudiyatham' WHERE gym_id IS NULL OR gym_id = ''`);
+  await db.run(`UPDATE pos_sales SET gym_id = 'gym-gudiyatham' WHERE gym_id IS NULL OR gym_id = ''`);
+  await db.run(`UPDATE lockers SET gym_id = 'gym-gudiyatham' WHERE gym_id IS NULL OR gym_id = ''`);
+  await db.run(`UPDATE workout_routines SET gym_id = 'gym-gudiyatham' WHERE gym_id IS NULL OR gym_id = ''`);
+  await db.run(`UPDATE diet_plans SET gym_id = 'gym-gudiyatham' WHERE gym_id IS NULL OR gym_id = ''`);
+  await db.run(`UPDATE pt_sessions SET gym_id = 'gym-gudiyatham' WHERE gym_id IS NULL OR gym_id = ''`);
+  await db.run(`UPDATE floor_checkins SET gym_id = 'gym-gudiyatham' WHERE gym_id IS NULL OR gym_id = ''`);
+  await db.run(`UPDATE gym_notices SET gym_id = 'gym-gudiyatham' WHERE gym_id IS NULL OR gym_id = ''`);
+  await db.run(`UPDATE cash_drawer_reconciliations SET gym_id = 'gym-gudiyatham' WHERE gym_id IS NULL OR gym_id = ''`);
 
   // 2. Membership Plans (Synced with exact specifications)
   const officialPlans = [
@@ -155,6 +346,401 @@ export async function seedDatabase() {
     } else {
       await db.run('UPDATE gym_settings SET value = ? WHERE key = ?', [v, k]);
     }
+  }
+
+  // 3b. Branch Members & Check-ins for Vellore East & Chennai Anna Nagar
+  const branchMembers = [
+    {
+      id: 'mem-vel-101',
+      member_code: 'HH-VEL-101',
+      name: 'Anand Krishnan',
+      phone: '9840199001',
+      email: 'anand.k@example.com',
+      plan_id: 'plan-3m',
+      plan_name: '3 Month Classic Fitness',
+      start_date: '2026-09-01',
+      expiry_date: '2026-12-01',
+      status: 'active',
+      loyalty_points: 160,
+      gym_id: 'gym-vellore',
+      assigned_trainer_id: 'staff-trainer-1'
+    },
+    {
+      id: 'mem-vel-102',
+      member_code: 'HH-VEL-102',
+      name: 'Deepa Sundaram',
+      phone: '9840199002',
+      email: 'deepa.s@example.com',
+      plan_id: 'plan-6m',
+      plan_name: '6 Month Transformation',
+      start_date: '2026-08-15',
+      expiry_date: '2027-02-15',
+      status: 'active',
+      loyalty_points: 240,
+      gym_id: 'gym-vellore',
+      assigned_trainer_id: 'staff-trainer-2'
+    },
+    {
+      id: 'mem-vel-103',
+      member_code: 'HH-VEL-103',
+      name: 'Ganesh Moorthy',
+      phone: '9840199003',
+      email: 'ganesh.m@example.com',
+      plan_id: 'plan-1m',
+      plan_name: '1 Month Starter',
+      start_date: '2026-10-01',
+      expiry_date: '2026-11-04',
+      status: 'grace',
+      loyalty_points: 80,
+      gym_id: 'gym-vellore'
+    },
+    {
+      id: 'mem-vel-104',
+      member_code: 'HH-VEL-104',
+      name: 'Koushik V',
+      phone: '9840199004',
+      email: 'koushik.v@example.com',
+      plan_id: 'plan-12m',
+      plan_name: '12 Month Elite Annual',
+      start_date: '2026-06-01',
+      expiry_date: '2027-06-01',
+      status: 'active',
+      loyalty_points: 410,
+      gym_id: 'gym-vellore',
+      assigned_trainer_id: 'staff-trainer-1'
+    },
+    {
+      id: 'mem-vel-105',
+      member_code: 'HH-VEL-105',
+      name: 'Shalini R',
+      phone: '9840199005',
+      email: 'shalini.r@example.com',
+      plan_id: 'plan-pt-sub',
+      plan_name: 'PT Subscription (10 Sessions)',
+      start_date: '2026-10-15',
+      expiry_date: '2026-11-15',
+      status: 'active',
+      loyalty_points: 290,
+      pt_sessions_total: 10,
+      pt_sessions_remaining: 7,
+      gym_id: 'gym-vellore',
+      assigned_trainer_id: 'staff-trainer-2'
+    },
+    {
+      id: 'mem-vel-106',
+      member_code: 'HH-VEL-106',
+      name: 'Harish Babu',
+      phone: '9840199006',
+      email: 'harish.b@example.com',
+      plan_id: 'plan-6m',
+      plan_name: '6 Month Transformation',
+      start_date: '2026-04-01',
+      expiry_date: '2026-10-01',
+      status: 'expired',
+      loyalty_points: 120,
+      gym_id: 'gym-vellore'
+    },
+    {
+      id: 'mem-vel-107',
+      member_code: 'HH-VEL-107',
+      name: 'Nithya S',
+      phone: '9840199007',
+      email: 'nithya.s@example.com',
+      plan_id: 'plan-1m',
+      plan_name: '1 Month Starter',
+      start_date: '2026-09-15',
+      expiry_date: '2026-11-20',
+      status: 'frozen',
+      is_frozen: 1,
+      freeze_start_date: '2026-10-25',
+      loyalty_points: 150,
+      gym_id: 'gym-vellore'
+    },
+    {
+      id: 'mem-chn-201',
+      member_code: 'HH-CHN-201',
+      name: 'Siddharth Roy',
+      phone: '9840188001',
+      email: 'siddharth.r@example.com',
+      plan_id: 'plan-12m',
+      plan_name: '12 Month Elite Annual',
+      start_date: '2026-05-10',
+      expiry_date: '2027-05-10',
+      status: 'active',
+      loyalty_points: 520,
+      gym_id: 'gym-chennai',
+      assigned_trainer_id: 'staff-trainer-1'
+    },
+    {
+      id: 'mem-chn-202',
+      member_code: 'HH-CHN-202',
+      name: 'Meera Nambiar',
+      phone: '9840188002',
+      email: 'meera.n@example.com',
+      plan_id: 'plan-pt-sub',
+      plan_name: 'PT Subscription (10 Sessions)',
+      start_date: '2026-10-20',
+      expiry_date: '2026-11-20',
+      status: 'active',
+      loyalty_points: 350,
+      pt_sessions_total: 10,
+      pt_sessions_remaining: 8,
+      gym_id: 'gym-chennai',
+      assigned_trainer_id: 'staff-trainer-2'
+    },
+    {
+      id: 'mem-chn-203',
+      member_code: 'HH-CHN-203',
+      name: 'Vikram Seth',
+      phone: '9840188003',
+      email: 'vikram.s@example.com',
+      plan_id: 'plan-6m',
+      plan_name: '6 Month Transformation',
+      start_date: '2026-07-01',
+      expiry_date: '2027-01-01',
+      status: 'active',
+      loyalty_points: 310,
+      gym_id: 'gym-chennai'
+    },
+    {
+      id: 'mem-chn-204',
+      member_code: 'HH-CHN-204',
+      name: 'Divya Balaji',
+      phone: '9840188004',
+      email: 'divya.b@example.com',
+      plan_id: 'plan-12m',
+      plan_name: '12 Month Elite Annual',
+      start_date: '2026-03-01',
+      expiry_date: '2027-03-01',
+      status: 'active',
+      loyalty_points: 640,
+      gym_id: 'gym-chennai',
+      assigned_trainer_id: 'staff-trainer-1'
+    },
+    {
+      id: 'mem-chn-205',
+      member_code: 'HH-CHN-205',
+      name: 'Ashwin Kumar',
+      phone: '9840188005',
+      email: 'ashwin.k@example.com',
+      plan_id: 'plan-3m',
+      plan_name: '3 Month Classic Fitness',
+      start_date: '2026-09-10',
+      expiry_date: '2026-12-10',
+      status: 'active',
+      loyalty_points: 220,
+      gym_id: 'gym-chennai'
+    },
+    {
+      id: 'mem-chn-206',
+      member_code: 'HH-CHN-206',
+      name: 'Preethi V',
+      phone: '9840188006',
+      email: 'preethi.v@example.com',
+      plan_id: 'plan-1m',
+      plan_name: '1 Month Starter',
+      start_date: '2026-10-02',
+      expiry_date: '2026-11-04',
+      status: 'grace',
+      loyalty_points: 90,
+      gym_id: 'gym-chennai'
+    },
+    {
+      id: 'mem-chn-207',
+      member_code: 'HH-CHN-207',
+      name: 'Karthikeyan M',
+      phone: '9840188007',
+      email: 'karthik.m@example.com',
+      plan_id: 'plan-6m',
+      plan_name: '6 Month Transformation',
+      start_date: '2026-03-15',
+      expiry_date: '2026-09-15',
+      status: 'expired',
+      loyalty_points: 180,
+      gym_id: 'gym-chennai'
+    },
+    {
+      id: 'mem-chn-208',
+      member_code: 'HH-CHN-208',
+      name: 'Rohit Sharma',
+      phone: '9840188008',
+      email: 'rohit.s@example.com',
+      plan_id: 'plan-12m',
+      plan_name: '12 Month Elite Annual',
+      start_date: '2026-06-01',
+      expiry_date: '2027-07-01',
+      status: 'frozen',
+      is_frozen: 1,
+      freeze_start_date: '2026-10-20',
+      loyalty_points: 460,
+      gym_id: 'gym-chennai'
+    }
+  ];
+
+  for (const bm of branchMembers) {
+    const existing = await db.get('SELECT id FROM members WHERE id = ?', [bm.id]);
+    if (!existing) {
+      await db.run(
+        `INSERT INTO members (id, member_code, name, phone, email, plan_id, plan_name, start_date, expiry_date, status, loyalty_points, gym_id, assigned_trainer_id, pt_sessions_total, pt_sessions_remaining, is_frozen, freeze_start_date)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [bm.id, bm.member_code, bm.name, bm.phone, bm.email, bm.plan_id, bm.plan_name, bm.start_date, bm.expiry_date, bm.status, bm.loyalty_points, bm.gym_id, bm.assigned_trainer_id || null, bm.pt_sessions_total || 0, bm.pt_sessions_remaining || 0, bm.is_frozen || 0, bm.freeze_start_date || null]
+      );
+    } else {
+      await db.run(
+        `UPDATE members SET member_code = ?, name = ?, phone = ?, email = ?, plan_id = ?, plan_name = ?, start_date = ?, expiry_date = ?, status = ?, loyalty_points = ?, gym_id = ?, assigned_trainer_id = ?, pt_sessions_total = ?, pt_sessions_remaining = ?, is_frozen = ?, freeze_start_date = ? WHERE id = ?`,
+        [bm.member_code, bm.name, bm.phone, bm.email, bm.plan_id, bm.plan_name, bm.start_date, bm.expiry_date, bm.status, bm.loyalty_points, bm.gym_id, bm.assigned_trainer_id || null, bm.pt_sessions_total || 0, bm.pt_sessions_remaining || 0, bm.is_frozen || 0, bm.freeze_start_date || null, bm.id]
+      );
+    }
+  }
+
+  // Branch Invoices for Vellore and Chennai
+  const branchInvoices = [
+    {
+      id: 'inv-vel-1',
+      invoice_number: 'INV-VEL-2026-001',
+      member_id: 'mem-vel-101',
+      member_name: 'Anand Krishnan',
+      member_phone: '9840199001',
+      item_type: 'membership',
+      item_description: '3 Month Classic Fitness Membership',
+      subtotal: 2117.80,
+      cgst: 190.60,
+      sgst: 190.60,
+      grand_total: 2499.00,
+      payment_method: 'upi',
+      status: 'paid',
+      gym_id: 'gym-vellore'
+    },
+    {
+      id: 'inv-chn-1',
+      invoice_number: 'INV-CHN-2026-001',
+      member_id: 'mem-chn-201',
+      member_name: 'Siddharth Roy',
+      member_phone: '9840188001',
+      item_type: 'membership',
+      item_description: '12 Month Elite Annual Membership',
+      subtotal: 7626.27,
+      cgst: 686.36,
+      sgst: 686.36,
+      grand_total: 8999.00,
+      payment_method: 'upi',
+      status: 'paid',
+      gym_id: 'gym-chennai'
+    }
+  ];
+
+  for (const bi of branchInvoices) {
+    const existing = await db.get('SELECT id FROM invoices WHERE id = ?', [bi.id]);
+    if (!existing) {
+      await db.run(
+        `INSERT INTO invoices (id, invoice_number, member_id, member_name, member_phone, item_type, item_description, subtotal, cgst, sgst, grand_total, payment_method, status, gym_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [bi.id, bi.invoice_number, bi.member_id, bi.member_name, bi.member_phone, bi.item_type, bi.item_description, bi.subtotal, bi.cgst, bi.sgst, bi.grand_total, bi.payment_method, bi.status, bi.gym_id]
+      );
+    }
+  }
+
+  // Branch Expenses
+  const branchExpenses = [
+    {
+      id: 'exp-vel-1',
+      title: 'Vellore East Club Space Rent (Nov 2026)',
+      category: 'Rent',
+      amount: 32000.0,
+      payment_method: 'bank_transfer',
+      expense_date: '2026-11-01',
+      vendor_name: 'Vellore Commercial Plaza',
+      gym_id: 'gym-vellore'
+    },
+    {
+      id: 'exp-chn-1',
+      title: 'Anna Nagar Arena Space Lease (Nov 2026)',
+      category: 'Rent',
+      amount: 65000.0,
+      payment_method: 'bank_transfer',
+      expense_date: '2026-11-01',
+      vendor_name: 'Anna Nagar Properties LLC',
+      gym_id: 'gym-chennai'
+    }
+  ];
+
+  for (const be of branchExpenses) {
+    const existing = await db.get('SELECT id FROM expenses WHERE id = ?', [be.id]);
+    if (!existing) {
+      await db.run(
+        `INSERT INTO expenses (id, title, category, amount, payment_method, expense_date, vendor_name, gym_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [be.id, be.title, be.category, be.amount, be.payment_method, be.expense_date, be.vendor_name, be.gym_id]
+      );
+    }
+  }
+
+  // 3c. Seed Live Floor Rush & Recent Check-in Activity (Active trainees within last 90 minutes)
+  // Clean prior seeded branch checkins
+  await db.run(`DELETE FROM checkins WHERE id LIKE 'chk-vel-%' OR id LIKE 'chk-chn-%' OR id LIKE 'chk-gud-%'`);
+
+  // Gudiyatham check-ins (10 active -> Light / Moderate Floor Rush)
+  const gudiyathamCheckins = [
+    { id: 'chk-gud-1', member_id: 'mem-1001', member_code: 'EG-1001', member_name: 'Vigneshwaran K', checkin_type: 'qr_scan', verification_status: 'granted', points_awarded: 20, min_ago: 8 },
+    { id: 'chk-gud-2', member_id: 'mem-1002', member_code: 'EG-1002', member_name: 'Aravind Swamy', checkin_type: 'qr_scan', verification_status: 're_entry', points_awarded: 0, min_ago: 16 },
+    { id: 'chk-gud-3', member_id: 'mem-1003', member_code: 'EG-1003', member_name: 'Karthik Raja', checkin_type: 'qr_scan', verification_status: 'granted', points_awarded: 20, min_ago: 24 },
+    { id: 'chk-gud-4', member_id: 'mem-1004', member_code: 'EG-1004', member_name: 'Suresh Kumar', checkin_type: 'qr_scan', verification_status: 'granted', points_awarded: 20, min_ago: 33 },
+    { id: 'chk-gud-5', member_id: 'mem-1005', member_code: 'EG-1005', member_name: 'Mohan Babu', checkin_type: 'manual', manual_officer_name: 'Priya V (Front Desk)', verification_status: 'granted', points_awarded: 20, min_ago: 42 },
+    { id: 'chk-gud-6', member_id: 'mem-1006', member_code: 'EG-1006', member_name: 'Rajesh Kannan', checkin_type: 'qr_scan', verification_status: 'granted', points_awarded: 20, min_ago: 51 },
+    { id: 'chk-gud-7', member_id: 'mem-1007', member_code: 'EG-1007', member_name: 'Saravanan R', checkin_type: 'qr_scan', verification_status: 'grace_entry', points_awarded: 0, min_ago: 62 },
+    { id: 'chk-gud-8', member_id: 'mem-1001', member_code: 'EG-1001', member_name: 'Vigneshwaran K', checkin_type: 'qr_scan', verification_status: 're_entry', points_awarded: 0, min_ago: 73 },
+    { id: 'chk-gud-9', member_id: 'mem-1004', member_code: 'EG-1004', member_name: 'Suresh Kumar', checkin_type: 'qr_scan', verification_status: 'granted', points_awarded: 20, min_ago: 80 },
+    { id: 'chk-gud-10', member_id: 'mem-1002', member_code: 'EG-1002', member_name: 'Aravind Swamy', checkin_type: 'qr_scan', verification_status: 'granted', points_awarded: 20, min_ago: 87 }
+  ];
+
+  for (const gc of gudiyathamCheckins) {
+    await db.run(
+      `INSERT INTO checkins (id, member_id, member_code, member_name, checkin_type, manual_officer_name, verification_status, points_awarded, checkin_time, gym_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '-${gc.min_ago} minutes', 'localtime'), 'gym-gudiyatham')`,
+      [gc.id, gc.member_id, gc.member_code, gc.member_name, gc.checkin_type, gc.manual_officer_name || null, gc.verification_status, gc.points_awarded]
+    );
+  }
+
+  // Vellore check-ins (18 active -> Moderate Floor Rush)
+  const velloreNames = [
+    { id: 'mem-vel-101', code: 'HH-VEL-101', name: 'Anand Krishnan' },
+    { id: 'mem-vel-102', code: 'HH-VEL-102', name: 'Deepa Sundaram' },
+    { id: 'mem-vel-103', code: 'HH-VEL-103', name: 'Ganesh Moorthy' },
+    { id: 'mem-vel-104', code: 'HH-VEL-104', name: 'Koushik V' },
+    { id: 'mem-vel-105', code: 'HH-VEL-105', name: 'Shalini R' }
+  ];
+  for (let i = 1; i <= 18; i++) {
+    const mem = velloreNames[(i - 1) % velloreNames.length];
+    const minAgo = Math.floor(2 + (i * 4.5)); // spaced across last 85 minutes
+    const isManual = i % 4 === 0;
+    const status = i === 3 ? 'grace_entry' : i % 5 === 0 ? 're_entry' : 'granted';
+    const pts = status === 'granted' ? 20 : 0;
+    await db.run(
+      `INSERT INTO checkins (id, member_id, member_code, member_name, checkin_type, manual_officer_name, verification_status, points_awarded, checkin_time, gym_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '-${minAgo} minutes', 'localtime'), 'gym-vellore')`,
+      [`chk-vel-${i}`, mem.id, mem.code, mem.name, isManual ? 'manual' : 'qr_scan', isManual ? 'Vellore Desk Admin' : null, status, pts]
+    );
+  }
+
+  // Chennai check-ins (32 active -> Peak Rush)
+  const chennaiNames = [
+    { id: 'mem-chn-201', code: 'HH-CHN-201', name: 'Siddharth Roy' },
+    { id: 'mem-chn-202', code: 'HH-CHN-202', name: 'Meera Nambiar' },
+    { id: 'mem-chn-203', code: 'HH-CHN-203', name: 'Vikram Seth' },
+    { id: 'mem-chn-204', code: 'HH-CHN-204', name: 'Divya Balaji' },
+    { id: 'mem-chn-205', code: 'HH-CHN-205', name: 'Ashwin Kumar' }
+  ];
+  for (let i = 1; i <= 32; i++) {
+    const mem = chennaiNames[(i - 1) % chennaiNames.length];
+    const minAgo = Math.floor(1 + (i * 2.6)); // spaced across last 85 minutes
+    const isManual = i % 6 === 0;
+    const status = i === 5 ? 'grace_entry' : i % 4 === 0 ? 're_entry' : 'granted';
+    const pts = status === 'granted' ? 20 : 0;
+    await db.run(
+      `INSERT INTO checkins (id, member_id, member_code, member_name, checkin_type, manual_officer_name, verification_status, points_awarded, checkin_time, gym_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '-${minAgo} minutes', 'localtime'), 'gym-chennai')`,
+      [`chk-chn-${i}`, mem.id, mem.code, mem.name, isManual ? 'manual' : 'qr_scan', isManual ? 'Anna Nagar Desk Officer' : null, status, pts]
+    );
   }
 
   // 4. Gym Notices

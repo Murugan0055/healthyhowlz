@@ -5,13 +5,15 @@ import {
   deleteExpense,
   getIncomeExpenseSummary
 } from '../services/expenseService.js';
+import { getTenantGymId } from '../middleware/tenant.js';
 
 const router = express.Router();
 
 // Get summary metrics (Income, Expenses, Net Profit)
 router.get('/summary', async (req, res) => {
   try {
-    const summary = await getIncomeExpenseSummary();
+    const gymId = getTenantGymId(req);
+    const summary = await getIncomeExpenseSummary(gymId);
     res.json(summary);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -22,7 +24,8 @@ router.get('/summary', async (req, res) => {
 router.get('/', async (req, res) => {
   try {
     const { category, month, search } = req.query;
-    const expenses = await getAllExpenses({ category, month, search });
+    const gymId = getTenantGymId(req);
+    const expenses = await getAllExpenses({ category, month, search, gymId });
     res.json(expenses);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -32,6 +35,7 @@ router.get('/', async (req, res) => {
 // Create new expense
 router.post('/', async (req, res) => {
   try {
+    const gymId = req.body.gym_id || getTenantGymId(req);
     const { title, category, amount, paymentMethod, paymentRef, expenseDate, vendorName, notes, loggedBy } = req.body;
     if (!title || !category || !amount) {
       return res.status(400).json({ error: 'Title, category, and amount are required' });
@@ -45,7 +49,8 @@ router.post('/', async (req, res) => {
       expenseDate,
       vendorName,
       notes,
-      loggedBy
+      loggedBy,
+      gymId
     });
     res.status(201).json(newExpense);
   } catch (err) {

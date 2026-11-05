@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { api } from '../services/api';
 
-export default function DashboardPage({ onOpenCashReconcile, onViewInvoice }) {
+export default function DashboardPage({ currentGymId, currentGym, onOpenCashReconcile, onViewInvoice }) {
   const [revenueData, setRevenueData] = useState(null);
   const [forecast, setForecast] = useState(null);
   const [reconciliations, setReconciliations] = useState([]);
@@ -40,7 +40,7 @@ export default function DashboardPage({ onOpenCashReconcile, onViewInvoice }) {
       }
     };
     load();
-  }, []);
+  }, [currentGymId]);
 
   if (loading || !revenueData) {
     return (

@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { api } from '../services/api';
 
-export default function ExpiryAlertsPage({ onRenewMember }) {
+export default function ExpiryAlertsPage({ currentGymId, currentGym, onRenewMember }) {
   const [alerts, setAlerts] = useState({ tier1EarlyBird: [], tier2Urgent: [], tier3FinalNotice: [] });
   const [loading, setLoading] = useState(false);
 
@@ -31,7 +31,7 @@ export default function ExpiryAlertsPage({ onRenewMember }) {
 
   useEffect(() => {
     fetchAlerts();
-  }, []);
+  }, [currentGymId]);
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">

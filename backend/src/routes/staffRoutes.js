@@ -11,9 +11,22 @@ const router = express.Router();
 router.get('/', async (req, res) => {
   try {
     const db = await getDb();
-    const staff = await db.all(
-      'SELECT id, name, role, phone, email, security_pin, commission_rate, is_active, created_at FROM staff ORDER BY CASE role WHEN "super_admin" THEN 1 WHEN "owner" THEN 2 WHEN "manager" THEN 3 WHEN "admin" THEN 4 ELSE 5 END, name ASC'
-    );
+    const { gymId } = req.query;
+    let query = `
+      SELECT s.id, s.name, s.role, s.phone, s.email, s.security_pin, s.commission_rate, 
+             s.base_salary, s.gym_id, s.is_active, s.created_at,
+             g.name as gym_name, g.city as gym_city
+      FROM staff s
+      LEFT JOIN gyms g ON s.gym_id = g.id
+      WHERE 1=1
+    `;
+    const params = [];
+    if (gymId && gymId !== 'all') {
+      query += ` AND s.gym_id = ?`;
+      params.push(gymId);
+    }
+    query += ` ORDER BY CASE s.role WHEN "super_admin" THEN 1 WHEN "owner" THEN 2 WHEN "manager" THEN 3 WHEN "trainer" THEN 4 ELSE 5 END, s.name ASC`;
+    const staff = await db.all(query, params);
     res.json(staff);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch staff list' });
@@ -94,7 +107,7 @@ router.post('/login', async (req, res) => {
 // Create new admin / staff user (Cannot create another super_admin)
 router.post('/', async (req, res) => {
   try {
-    const { name, role, phone, email, password, pin, commissionRate } = req.body;
+    const { name, role, phone, email, password, pin, commissionRate, gymId, baseSalary } = req.body;
 
     if (!name || !phone) {
       return res.status(400).json({ error: 'Name and Phone are required' });
@@ -120,22 +133,25 @@ router.post('/', async (req, res) => {
     const hashedPassword = await bcrypt.hash(password || 'admin123', 10);
     const securityPin = pin && pin.length >= 4 ? pin : '1234';
     const commRate = parseFloat(commissionRate || '5.0');
+    const assignedGymId = gymId || 'gym-gudiyatham';
+    const salary = parseFloat(baseSalary || (assignedRole === 'trainer' ? 18000.0 : 15000.0));
 
     await db.run(
-      `INSERT INTO staff (id, name, role, phone, email, password_hash, security_pin, commission_rate, is_active, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, datetime('now', 'localtime'))`,
-      [id, name, assignedRole, phone, email || '', hashedPassword, securityPin, commRate]
+      `INSERT INTO staff (id, name, role, phone, email, password_hash, security_pin, commission_rate, base_salary, gym_id, is_active, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, datetime('now', 'localtime'))`,
+      [id, name, assignedRole, phone, email || '', hashedPassword, securityPin, commRate, salary, assignedGymId]
     );
 
-    res.status(201).json({
-      id,
-      name,
-      role: assignedRole,
-      phone,
-      email,
-      securityPin,
-      commissionRate: commRate
-    });
+    const createdStaff = await db.get(
+      `SELECT s.id, s.name, s.role, s.phone, s.email, s.security_pin, s.commission_rate, s.base_salary, s.gym_id, s.is_active,
+              g.name as gym_name, g.city as gym_city
+       FROM staff s
+       LEFT JOIN gyms g ON s.gym_id = g.id
+       WHERE s.id = ?`,
+      [id]
+    );
+
+    res.status(201).json(createdStaff);
   } catch (err) {
     console.error('Create staff error:', err);
     res.status(500).json({ error: err.message || 'Failed to create user' });
@@ -146,7 +162,7 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, role, phone, email, pin, commissionRate, password } = req.body;
+    const { name, role, phone, email, pin, commissionRate, password, gymId, baseSalary } = req.body;
     const db = await getDb();
 
     const currentStaff = await db.get('SELECT * FROM staff WHERE id = ?', [id]);
@@ -171,6 +187,9 @@ router.put('/:id', async (req, res) => {
       passwordHash = await bcrypt.hash(password.trim(), 10);
     }
 
+    const assignedGymId = gymId || currentStaff.gym_id || 'gym-gudiyatham';
+    const salary = baseSalary !== undefined ? parseFloat(baseSalary) : currentStaff.base_salary;
+
     await db.run(
       `UPDATE staff 
        SET name = COALESCE(?, name),
@@ -179,12 +198,23 @@ router.put('/:id', async (req, res) => {
            email = COALESCE(?, email),
            security_pin = COALESCE(?, security_pin),
            commission_rate = COALESCE(?, commission_rate),
+           base_salary = COALESCE(?, base_salary),
+           gym_id = ?,
            password_hash = ?
        WHERE id = ?`,
-      [name, finalRole, phone, email, pin, commissionRate, passwordHash, id]
+      [name, finalRole, phone, email, pin, commissionRate, salary, assignedGymId, passwordHash, id]
     );
 
-    res.json({ success: true, id, role: finalRole });
+    const updated = await db.get(
+      `SELECT s.id, s.name, s.role, s.phone, s.email, s.security_pin, s.commission_rate, s.base_salary, s.gym_id, s.is_active,
+              g.name as gym_name, g.city as gym_city
+       FROM staff s
+       LEFT JOIN gyms g ON s.gym_id = g.id
+       WHERE s.id = ?`,
+      [id]
+    );
+
+    res.json({ success: true, user: updated });
   } catch (err) {
     res.status(500).json({ error: err.message || 'Failed to update user' });
   }

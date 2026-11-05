@@ -19,13 +19,18 @@ import {
   DollarSign,
   Smartphone,
   ChevronRight,
-  Sparkles
+  Sparkles,
+  Building2
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useTenant } from '../context/TenantContext';
+import GymSwitcher from './GymSwitcher';
+import PwaInstallButton from './PwaInstallButton';
 
-export default function Navbar({ activeTab, setActiveTab, onOpenManualCheckin, onSwitchToClient, onSwitchToTrainer }) {
+export default function Navbar({ activeTab, setActiveTab, onOpenManualCheckin, onSwitchToClient, onSwitchToTrainer, onSwitchToPlatform }) {
   const { user, logout, isSuperAdmin, isOwner, isManager } = useAuth();
+  const { currentGymId, currentGym } = useTenant();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [rush, setRush] = useState({ count: 4, level: 'Light', badgeColor: 'emerald' });
 
@@ -40,9 +45,9 @@ export default function Navbar({ activeTab, setActiveTab, onOpenManualCheckin, o
 
   useEffect(() => {
     fetchRush();
-    const interval = setInterval(fetchRush, 30000); // 30s polling
+    const interval = setInterval(fetchRush, 15000); // 15s polling
     return () => clearInterval(interval);
-  }, []);
+  }, [currentGymId]);
 
   // Close drawer on escape key
   useEffect(() => {
@@ -131,28 +136,34 @@ export default function Navbar({ activeTab, setActiveTab, onOpenManualCheckin, o
             {/* Brand Logo & Name */}
             <div className="flex items-center gap-2.5">
               <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/20 text-slate-950 font-black">
-                <Dumbbell className="w-5 h-5 stroke-[2.5]" />
+                <span className="text-lg">🐺</span>
               </div>
-              <div>
+              <div className="hidden sm:block">
                 <div className="flex items-center gap-2">
-                  <span className="font-extrabold text-base tracking-tight brand-font text-white">
-                    ELITE FITNESS CENTER
+                  <span className="font-extrabold text-sm sm:text-base tracking-tight brand-font text-white">
+                    HEALTHYHOWLZ
                   </span>
-                  <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hidden sm:inline-block">
-                    Gudiyatham
+                  <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    {currentGym?.city ? `${currentGym.city} Facility` : 'Facility OS'}
                   </span>
                 </div>
                 <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
-                  <span className="text-slate-500">Active View:</span>
+                  <span className="text-slate-500">View:</span>
                   <span className="text-emerald-400 font-semibold">{activeItemLabel}</span>
                 </div>
               </div>
             </div>
+
+            {/* Multi-Tenant Gym Facility Switcher */}
+            <GymSwitcher onNavigatePlatform={onSwitchToPlatform} />
           </div>
 
-          {/* Right Header Controls: Floor Rush + Switch to Member App + User Pill + Logout */}
-          <div className="flex items-center gap-2.5">
+          {/* Right Header Controls: PWA Install + Floor Rush + Switch to Member App + User Pill + Logout */}
+          <div className="flex items-center gap-2 sm:gap-2.5">
             
+            {/* PWA Install Button */}
+            <PwaInstallButton compact={false} variant="navbar" />
+
             {/* Live Floor Rush Pill */}
             <div className={`hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-semibold ${getRushColorClass()}`}>
               <span className="relative flex h-2 w-2">
@@ -225,13 +236,13 @@ export default function Navbar({ activeTab, setActiveTab, onOpenManualCheckin, o
             <div className="p-5 border-b border-slate-800/80 flex items-center justify-between bg-[#111927]">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center text-slate-950 font-black shadow-lg shadow-emerald-500/20">
-                  <Dumbbell className="w-5 h-5 stroke-[2.5]" />
+                  <span className="text-xl">🐺</span>
                 </div>
                 <div>
                   <h2 className="text-base font-black text-white brand-font tracking-wide">
-                    ELITE FITNESS CENTER
+                    HEALTHYHOWLZ
                   </h2>
-                  <p className="text-[11px] text-emerald-400 font-medium">Gudiyatham Operating System</p>
+                  <p className="text-[11px] text-emerald-400 font-medium">Multi-Tenant Fitness OS</p>
                 </div>
               </div>
               <button
@@ -246,53 +257,39 @@ export default function Navbar({ activeTab, setActiveTab, onOpenManualCheckin, o
             {/* Scrollable Navigation Groups */}
             <div className="flex-1 overflow-y-auto p-4 space-y-5">
               
-              {/* Direct Ecosystem Switcher at top of Drawer */}
-              <div className="space-y-2 pb-3 border-b border-slate-800/80">
-                <h3 className="text-[10px] font-black uppercase tracking-widest text-emerald-400 px-3 py-0.5">
-                  Ecosystem Quick Switcher
-                </h3>
+              {/* Direct Ecosystem Switcher at top of Drawer (Only for Super Admin) */}
+              {isSuperAdmin && onSwitchToPlatform && (
+                <div className="space-y-2 pb-3 border-b border-slate-800/80">
+                  <div className="flex items-center justify-between px-3 py-0.5">
+                    <h3 className="text-[10px] font-black uppercase tracking-widest text-purple-400">
+                      SaaS HQ Navigation
+                    </h3>
+                  </div>
 
-                {onSwitchToTrainer && (
                   <button
                     onClick={() => {
-                      onSwitchToTrainer();
+                      onSwitchToPlatform();
                       setIsDrawerOpen(false);
                     }}
-                    className="w-full p-3 rounded-2xl bg-gradient-to-r from-emerald-500/20 to-teal-500/20 border border-emerald-500/40 text-emerald-300 flex items-center justify-between hover:bg-emerald-500/30 transition shadow-md"
+                    className="w-full p-3 rounded-2xl bg-gradient-to-r from-purple-950/60 to-slate-900 border border-purple-500/40 text-purple-300 flex items-center justify-between hover:bg-purple-900/40 transition shadow-md"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 text-slate-950 flex items-center justify-center font-bold text-sm">
-                        🏋️
+                      <div className="w-8 h-8 rounded-xl bg-purple-500/20 text-purple-300 flex items-center justify-center font-bold text-sm">
+                        🐺
                       </div>
                       <div className="text-left">
-                        <p className="text-xs font-black text-white">Trainer & Floor Coach App</p>
-                        <p className="text-[10px] text-emerald-400">Roster, Anti-Fraud PT & Commissions</p>
+                        <p className="text-xs font-black text-white">HealthyHowlz HQ Command</p>
+                        <p className="text-[10px] text-purple-300">SaaS Platform Admin & All Gyms</p>
                       </div>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-emerald-400" />
+                    <ChevronRight className="w-4 h-4 text-purple-400" />
                   </button>
-                )}
+                </div>
+              )}
 
-                {onSwitchToClient && (
-                  <button
-                    onClick={() => {
-                      onSwitchToClient();
-                      setIsDrawerOpen(false);
-                    }}
-                    className="w-full p-3 rounded-2xl bg-slate-900 border border-slate-700/80 text-slate-300 flex items-center justify-between hover:bg-slate-800 transition"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-xl bg-slate-800 text-slate-200 flex items-center justify-center font-bold">
-                        <Smartphone className="w-4 h-4" />
-                      </div>
-                      <div className="text-left">
-                        <p className="text-xs font-black text-white">Client Member App</p>
-                        <p className="text-[10px] text-slate-400">QR Pass, Workouts, Diet & UPI Pay</p>
-                      </div>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-slate-500" />
-                  </button>
-                )}
+              {/* PWA Install Button inside Drawer */}
+              <div className="pb-2 border-b border-slate-800/60">
+                <PwaInstallButton compact={false} variant="drawer" />
               </div>
 
               {navGroups.map((grp, gIdx) => (

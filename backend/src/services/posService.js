@@ -7,7 +7,7 @@ export async function getProducts() {
   return await db.all('SELECT * FROM pos_products WHERE is_active = 1 ORDER BY category, name');
 }
 
-export async function processPosCheckout({ items, paymentMethod, customerName, customerPhone, staffId, staffName }) {
+export async function processPosCheckout({ items, paymentMethod, customerName, customerPhone, staffId, staffName, gymId = 'gym-gudiyatham' }) {
   const db = await getDb();
   const saleId = uuidv4();
 
@@ -59,14 +59,15 @@ export async function processPosCheckout({ items, paymentMethod, customerName, c
     grandTotal: subtotal,
     paymentMethod,
     collectedByStaffId: staffId,
-    collectedByStaffName: staffName
+    collectedByStaffName: staffName,
+    gymId
   });
 
   // Record Sale
   await db.run(
-    `INSERT INTO pos_sales (id, invoice_id, items_json, total_amount, payment_method, staff_id, staff_name, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))`,
-    [saleId, invoice.id, JSON.stringify(itemsDetailed), subtotal, paymentMethod, staffId, staffName]
+    `INSERT INTO pos_sales (id, invoice_id, items_json, total_amount, payment_method, staff_id, staff_name, gym_id, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))`,
+    [saleId, invoice.id, JSON.stringify(itemsDetailed), subtotal, paymentMethod, staffId, staffName, gymId]
   );
 
   return {

@@ -3,38 +3,20 @@ import { api } from '../services/api';
 
 const TrainerAuthContext = createContext(null);
 
-export const DEMO_TRAINERS = [
-  {
-    id: 'staff-trainer-1',
-    name: 'Murugan S (Head Coach)',
-    role: 'trainer',
-    phone: '9840123458',
-    pin: '5555',
-    tagline: 'Head Strength & Floor Specialist',
-    baseSalary: 18000,
-    commissionRate: 20
-  },
-  {
-    id: 'staff-trainer-2',
-    name: 'Dinesh Kumar (Strength Coach)',
-    role: 'trainer',
-    phone: '9840123459',
-    pin: '7777',
-    tagline: 'Hypertrophy & Conditioning Coach',
-    baseSalary: 15000,
-    commissionRate: 18
-  }
-];
-
 export function TrainerAuthProvider({ children }) {
   const [trainer, setTrainer] = useState(() => {
     try {
-      const saved = localStorage.getItem('elite_gym_trainer_user');
+      // Check unified auth session first
+      const unifiedUser = localStorage.getItem('elite_gym_user');
+      if (unifiedUser) {
+        const parsed = JSON.parse(unifiedUser);
+        if (parsed.role === 'trainer') return parsed;
+      }
+      const saved = localStorage.getItem('healthyhowlz_trainer_session') || localStorage.getItem('elite_gym_trainer_user');
       if (saved) return JSON.parse(saved);
-      // Default to Coach Murugan S for effortless demo experience
-      return DEMO_TRAINERS[0];
+      return null;
     } catch (e) {
-      return DEMO_TRAINERS[0];
+      return null;
     }
   });
 
@@ -42,8 +24,13 @@ export function TrainerAuthProvider({ children }) {
 
   useEffect(() => {
     if (trainer) {
+      localStorage.setItem('healthyhowlz_trainer_session', JSON.stringify(trainer));
       localStorage.setItem('elite_gym_trainer_user', JSON.stringify(trainer));
+      if (trainer.gym_id) {
+        localStorage.setItem('healthyhowlz_active_gym_id', trainer.gym_id);
+      }
     } else {
+      localStorage.removeItem('healthyhowlz_trainer_session');
       localStorage.removeItem('elite_gym_trainer_user');
     }
   }, [trainer]);
@@ -62,13 +49,17 @@ export function TrainerAuthProvider({ children }) {
     }
   };
 
-  const switchTrainer = (trainerObj) => {
-    setTrainer(trainerObj);
-  };
-
   const logout = () => {
     setTrainer(null);
+    localStorage.removeItem('healthyhowlz_trainer_session');
     localStorage.removeItem('elite_gym_trainer_user');
+    localStorage.removeItem('elite_gym_user');
+    localStorage.removeItem('elite_gym_token');
+    localStorage.removeItem('elite_gym_active_portal');
+    try {
+      const url = new URL(window.location.origin + window.location.pathname);
+      window.history.replaceState({}, '', url);
+    } catch (e) {}
   };
 
   return (
@@ -78,9 +69,7 @@ export function TrainerAuthProvider({ children }) {
         isAuthenticated: !!trainer,
         loading,
         login,
-        switchTrainer,
-        logout,
-        demoTrainers: DEMO_TRAINERS
+        logout
       }}
     >
       {children}
@@ -88,9 +77,4 @@ export function TrainerAuthProvider({ children }) {
   );
 }
 
-export function useTrainerAuth() {
-  const ctx = useContext(TrainerAuthContext);
-  if (!ctx) throw new Error('useTrainerAuth must be used within TrainerAuthProvider');
-  return ctx;
-}
-
+export const useTrainerAuth = () => useContext(TrainerAuthContext);

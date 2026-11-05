@@ -23,7 +23,7 @@ import {
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
-export default function ExpensesPage() {
+export default function ExpensesPage({ currentGymId, currentGym }) {
   const { user } = useAuth();
   const [expenses, setExpenses] = useState([]);
   const [summary, setSummary] = useState(null);
@@ -74,7 +74,7 @@ export default function ExpensesPage() {
 
   useEffect(() => {
     fetchExpensesAndSummary();
-  }, [categoryFilter, searchQuery]);
+  }, [categoryFilter, searchQuery, currentGymId]);
 
   const handleCreateExpense = async (e) => {
     e.preventDefault();

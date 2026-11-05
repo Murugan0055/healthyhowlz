@@ -1,11 +1,13 @@
 import express from 'express';
 import { getRevenueDashboard, submitCashDrawerReconciliation, getCashReconciliationHistory, getProjectedCashFlow } from '../services/revenueService.js';
+import { getTenantGymId } from '../middleware/tenant.js';
 
 const router = express.Router();
 
 router.get('/dashboard', async (req, res) => {
   try {
-    const data = await getRevenueDashboard();
+    const gymId = getTenantGymId(req);
+    const data = await getRevenueDashboard(gymId);
     res.json(data);
   } catch (err) {
     console.error('Revenue dashboard error:', err);
@@ -15,7 +17,8 @@ router.get('/dashboard', async (req, res) => {
 
 router.get('/forecast', async (req, res) => {
   try {
-    const forecast = await getProjectedCashFlow();
+    const gymId = getTenantGymId(req);
+    const forecast = await getProjectedCashFlow(gymId);
     res.json(forecast);
   } catch (err) {
     res.status(500).json({ error: 'Failed to generate cash flow forecast' });
@@ -24,6 +27,7 @@ router.get('/forecast', async (req, res) => {
 
 router.post('/reconcile-cash', async (req, res) => {
   try {
+    const gymId = req.body.gym_id || getTenantGymId(req);
     const { staffId, staffName, physicalCashCounted, notes } = req.body;
     if (physicalCashCounted === undefined || physicalCashCounted === null) {
       return res.status(400).json({ error: 'Physical cash count is required' });
@@ -32,7 +36,8 @@ router.post('/reconcile-cash', async (req, res) => {
       staffId: staffId || 'staff-front-desk',
       staffName: staffName || 'Duty Officer',
       physicalCashCounted: parseFloat(physicalCashCounted),
-      notes
+      notes,
+      gymId
     });
     res.json(result);
   } catch (err) {
@@ -42,7 +47,8 @@ router.post('/reconcile-cash', async (req, res) => {
 
 router.get('/reconciliations', async (req, res) => {
   try {
-    const history = await getCashReconciliationHistory(15);
+    const gymId = getTenantGymId(req);
+    const history = await getCashReconciliationHistory(15, gymId);
     res.json(history);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch reconciliation history' });

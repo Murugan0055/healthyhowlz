@@ -3,10 +3,11 @@ import { trainerService } from '../services/trainerService.js';
 
 const router = express.Router();
 
-// Get list of active trainers (for switcher and dropdowns)
+// Get list of active trainers (optionally filtered by gym)
 router.get('/list', async (req, res, next) => {
   try {
-    const trainers = await trainerService.getTrainers();
+    const { gymId } = req.query;
+    const trainers = await trainerService.getTrainers(gymId);
     res.json({ trainers });
   } catch (err) {
     next(err);

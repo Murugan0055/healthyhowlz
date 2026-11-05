@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { api } from '../services/api';
 
-export default function LeadsCrmPage() {
+export default function LeadsCrmPage({ currentGymId, currentGym }) {
   const [kanbanData, setKanbanData] = useState({ columns: [] });
   const [winBackLeads, setWinBackLeads] = useState([]);
   const [staffPerformance, setStaffPerformance] = useState([]);
@@ -62,7 +62,7 @@ export default function LeadsCrmPage() {
 
   useEffect(() => {
     loadData();
-  }, [winBackDays]);
+  }, [winBackDays, currentGymId]);
 
   const handleStageChange = async (leadId, newStage) => {
     try {

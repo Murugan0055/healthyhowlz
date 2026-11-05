@@ -1,9 +1,12 @@
 import { getDb } from '../db/database.js';
 import { v4 as uuidv4 } from 'uuid';
 
-export async function getKanbanLeads() {
+export async function getKanbanLeads(gymId) {
   const db = await getDb();
-  const leads = await db.all('SELECT * FROM leads ORDER BY created_at DESC');
+  const filterGym = gymId && gymId !== 'all';
+  const query = filterGym ? 'SELECT * FROM leads WHERE gym_id = ? ORDER BY created_at DESC' : 'SELECT * FROM leads ORDER BY created_at DESC';
+  const params = filterGym ? [gymId] : [];
+  const leads = await db.all(query, params);
 
   const now = Date.now();
   const processedLeads = leads.map((lead) => {
@@ -75,8 +78,8 @@ export async function createLead(leadData) {
   }
 
   await db.run(
-    `INSERT INTO leads (id, name, phone, goal, budget, stage, trial_date, trial_pass_code, assigned_staff_id, assigned_staff_name, source, notes, created_at, last_contacted_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'), datetime('now', 'localtime'))`,
+    `INSERT INTO leads (id, name, phone, goal, budget, stage, trial_date, trial_pass_code, assigned_staff_id, assigned_staff_name, source, notes, gym_id, created_at, last_contacted_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'), datetime('now', 'localtime'))`,
     [
       id,
       leadData.name,
@@ -89,7 +92,8 @@ export async function createLead(leadData) {
       leadData.assigned_staff_id || null,
       staffName || null,
       leadData.source || 'Walk-in',
-      leadData.notes || ''
+      leadData.notes || '',
+      leadData.gym_id || 'gym-gudiyatham'
     ]
   );
 

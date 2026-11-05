@@ -3,6 +3,7 @@ import { getDb } from '../db/database.js';
 import { v4 as uuidv4 } from 'uuid';
 import { freezeMembership, unfreezeMembership } from '../services/expiryService.js';
 import { createInvoice } from '../services/invoiceService.js';
+import { getTenantGymId } from '../middleware/tenant.js';
 
 const router = express.Router();
 
@@ -11,6 +12,7 @@ router.get('/', async (req, res) => {
   try {
     const db = await getDb();
     const { status, search } = req.query;
+    const gymId = getTenantGymId(req);
 
     let query = `
       SELECT m.*, p.name as plan_title, s.name as trainer_name, l.locker_number,
@@ -22,6 +24,11 @@ router.get('/', async (req, res) => {
       WHERE 1=1
     `;
     const params = [];
+
+    if (gymId && gymId !== 'all') {
+      query += ` AND m.gym_id = ?`;
+      params.push(gymId);
+    }
 
     if (status && status !== 'all') {
       query += ` AND m.status = ?`;
@@ -108,6 +115,7 @@ router.post('/', async (req, res) => {
     const memberCode = `EG-${1001 + (countRow?.count || 0)}`;
 
     const id = uuidv4();
+    const gymId = req.body.gym_id || getTenantGymId(req);
     const start = startDate || new Date().toISOString().split('T')[0];
     const expiry = new Date(start);
     expiry.setDate(expiry.getDate() + (plan.duration_days || plan.duration_months * 30));
@@ -121,12 +129,12 @@ router.post('/', async (req, res) => {
       `INSERT INTO members (
         id, member_code, name, phone, email, photo_url, gender, dob, emergency_contact_name,
         emergency_contact_phone, fitness_goals, medical_flags, plan_id, plan_name,
-        start_date, expiry_date, status, loyalty_points, assigned_trainer_id, assigned_locker_id, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', 50, ?, ?, datetime('now', 'localtime'))`,
+        start_date, expiry_date, status, loyalty_points, assigned_trainer_id, assigned_locker_id, gym_id, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', 50, ?, ?, ?, datetime('now', 'localtime'))`,
       [
         id, memberCode, name, phone, email || '', req.body.photoUrl || defaultAvatar, gender || 'Male',
         dob || null, emergencyContactName || '', emergencyContactPhone || '', fitnessGoals || 'Fitness',
-        medicalFlags || '', plan.id, plan.name, start, expiryDateStr, assignedTrainerId || null, assignedLockerId || null
+        medicalFlags || '', plan.id, plan.name, start, expiryDateStr, assignedTrainerId || null, assignedLockerId || null, gymId
       ]
     );
 

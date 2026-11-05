@@ -7,21 +7,27 @@ import {
   Building2, 
   LogOut, 
   User, 
-  ArrowLeftRight,
   ShieldCheck,
-  Sparkles
+  Sparkles,
+  Calendar
 } from 'lucide-react';
-import { useMemberAuth, DEMO_MEMBERS } from './MemberAuthContext';
+import { useMemberAuth } from './MemberAuthContext';
 import DynamicQrPass from './DynamicQrPass';
 import WorkoutLogger from './WorkoutLogger';
 import DietMealTracker from './DietMealTracker';
 import LoyaltyWallet from './LoyaltyWallet';
 import ClubFloorRush from './ClubFloorRush';
+import PwaInstallButton from '../components/PwaInstallButton';
 
-export default function ClientPwaApp({ onSwitchToAdmin, onSwitchToTrainer }) {
-  const { member, logout, switchDemoMember } = useMemberAuth();
+export default function ClientPwaApp({ onLogout }) {
+  const { member, logout } = useMemberAuth();
   const [activeTab, setActiveTab] = useState('pass');
   const [showMemberDropdown, setShowMemberDropdown] = useState(false);
+
+  const handleLogout = () => {
+    logout();
+    if (onLogout) onLogout();
+  };
 
   const navTabs = [
     { id: 'pass', label: 'QR Pass', icon: QrCode },
@@ -41,110 +47,74 @@ export default function ClientPwaApp({ onSwitchToAdmin, onSwitchToTrainer }) {
           {/* Gym Brand Snip */}
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-slate-950 font-black shadow-md shadow-emerald-500/20">
-              <Dumbbell className="w-4 h-4 stroke-[2.5]" />
+              <span className="text-base">🐺</span>
             </div>
             <div>
               <h1 className="text-sm font-black tracking-wide text-white brand-font leading-tight">
-                ELITE FITNESS CLUB
+                HEALTHYHOWLZ
               </h1>
-              <p className="text-[10px] text-emerald-400 font-semibold tracking-wide">Gudiyatham Member App</p>
+              <p className="text-[10px] text-emerald-400 font-semibold tracking-wide">Member Digital Pass</p>
             </div>
           </div>
 
-          {/* Member Profile Avatar & Demo Switcher */}
+          {/* Member Profile Avatar, PWA Install & Sign Out */}
           <div className="flex items-center gap-2 relative">
+            <PwaInstallButton compact={true} variant="navbar" />
+
             <button
               onClick={() => setShowMemberDropdown(!showMemberDropdown)}
-              className="flex items-center gap-2 bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 rounded-full py-1 px-2.5 transition active:scale-95 shadow-sm"
-              title="Switch Member Profile"
+              className="flex items-center gap-1.5 bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 rounded-full py-1 px-2.5 transition active:scale-95 shadow-sm"
+              title="View Member Account"
             >
-              <img
-                src={member?.photo_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
-                alt={member?.name}
-                className="w-5 h-5 rounded-full object-cover border border-emerald-400"
-              />
+              <div className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400 flex items-center justify-center text-[10px] font-bold">
+                {member?.name ? member.name.charAt(0) : 'M'}
+              </div>
               <span className="text-xs font-bold text-slate-200 max-w-[85px] truncate">
-                {member?.name?.split(' ')[0] || 'Vignesh'}
+                {member?.name?.split(' ')[0] || 'Member'}
               </span>
               <span className="text-[9px] font-mono text-emerald-400 font-bold bg-emerald-500/10 px-1.5 py-0.2 rounded border border-emerald-500/20">
-                {member?.member_code || 'EG-1001'}
+                {member?.member_code || 'PASS'}
               </span>
             </button>
 
-            {/* Portal Switcher Button (Switch to Admin Portal) */}
-            {onSwitchToAdmin && (
-              <button
-                onClick={onSwitchToAdmin}
-                className="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition border border-slate-700 active:scale-95"
-                title="Switch to Admin & Owner Portal"
-              >
-                <ArrowLeftRight className="w-3.5 h-3.5" />
-              </button>
-            )}
-
-            {/* Member Switcher Dropdown */}
+            {/* Member Account Drawer Modal */}
             {showMemberDropdown && (
-              <div className="absolute right-0 top-12 z-50 w-64 bg-[#121927] border border-slate-700 rounded-2xl p-2.5 shadow-2xl space-y-2 animate-fadeIn">
-                <div className="px-2 py-1 border-b border-slate-800">
-                  <span className="text-[10px] font-bold uppercase text-slate-400">Switch Demo Member</span>
+              <div className="absolute right-0 top-12 z-50 w-72 bg-[#121927] border border-slate-700 rounded-3xl p-4 shadow-2xl space-y-3 animate-fadeIn">
+                <div className="flex items-start justify-between pb-2 border-b border-slate-800">
+                  <div>
+                    <h3 className="text-xs font-bold text-white">{member?.name || 'Active Member'}</h3>
+                    <p className="text-[10px] font-mono text-emerald-400">{member?.member_code || 'ID: --'}</p>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    {member?.status || 'Active'}
+                  </span>
                 </div>
-                {DEMO_MEMBERS.map((demo) => (
-                  <button
-                    key={demo.memberCode}
-                    onClick={() => {
-                      switchDemoMember(demo);
-                      setShowMemberDropdown(false);
-                    }}
-                    className={`w-full text-left p-2 rounded-xl transition flex items-center justify-between text-xs ${
-                      member?.member_code === demo.memberCode
-                        ? 'bg-emerald-500/20 text-emerald-300 font-bold'
-                        : 'hover:bg-slate-800 text-slate-300'
-                    }`}
-                  >
-                    <div>
-                      <p className="font-semibold">{demo.name}</p>
-                      <p className="text-[10px] text-slate-400">{demo.memberCode}</p>
-                    </div>
-                    <span className="text-[10px] font-mono bg-slate-800 px-1.5 py-0.5 rounded text-emerald-400">
-                      PIN: {demo.pin}
-                    </span>
-                  </button>
-                ))}
-                <div className="pt-1 border-t border-slate-800 space-y-1">
-                  {onSwitchToTrainer && (
-                    <button
-                      onClick={() => {
-                        setShowMemberDropdown(false);
-                        onSwitchToTrainer();
-                      }}
-                      className="w-full text-left p-2 rounded-xl text-emerald-400 hover:bg-emerald-500/10 text-xs font-semibold flex items-center gap-2"
-                    >
-                      <span>🏋️</span>
-                      <span>Trainer & Floor Coach Portal</span>
-                    </button>
-                  )}
-                  {onSwitchToAdmin && (
-                    <button
-                      onClick={() => {
-                        setShowMemberDropdown(false);
-                        onSwitchToAdmin();
-                      }}
-                      className="w-full text-left p-2 rounded-xl text-slate-300 hover:bg-slate-800 text-xs font-semibold flex items-center gap-2"
-                    >
-                      <span>🏢</span>
-                      <span>Admin & Owner Engine</span>
-                    </button>
-                  )}
-                  <button
-                    onClick={() => {
-                      logout();
-                      setShowMemberDropdown(false);
-                    }}
-                    className="w-full text-left p-2 rounded-xl text-rose-400 hover:bg-rose-500/10 text-xs font-semibold flex items-center gap-1.5"
-                  >
-                    <LogOut className="w-3.5 h-3.5" /> Sign Out
-                  </button>
+
+                <div className="space-y-1.5 text-[11px] text-slate-300 bg-slate-900/80 p-2.5 rounded-2xl border border-slate-800">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-400">Plan:</span>
+                    <span className="font-semibold text-white truncate max-w-[140px]">{member?.plan_title || 'Active Plan'}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-400">Facility:</span>
+                    <span className="font-semibold text-emerald-400 truncate max-w-[140px]">{member?.gym_name || 'HealthyHowlz Gym'}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-400">Days Remaining:</span>
+                    <span className="font-mono font-bold text-emerald-300">{member?.days_left ?? '--'} days</span>
+                  </div>
                 </div>
+
+                <button
+                  onClick={() => {
+                    setShowMemberDropdown(false);
+                    handleLogout();
+                  }}
+                  className="w-full py-2 px-3 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 text-xs font-bold flex items-center justify-center gap-2 transition"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span>Sign Out of Member App</span>
+                </button>
               </div>
             )}
           </div>
@@ -169,26 +139,32 @@ export default function ClientPwaApp({ onSwitchToAdmin, onSwitchToTrainer }) {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 py-1 px-1 flex flex-col items-center justify-center transition select-none relative ${
-                  isActive ? 'text-emerald-400' : 'text-slate-400 hover:text-slate-200'
+                className={`flex flex-col items-center justify-center flex-1 py-1 px-1 rounded-2xl transition-all relative ${
+                  isActive
+                    ? 'text-emerald-400 font-bold'
+                    : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
-                <div className={`p-1 rounded-xl transition ${isActive ? 'bg-emerald-500/15' : ''}`}>
-                  <Icon className={`w-5 h-5 ${isActive ? 'stroke-[2.5]' : 'stroke-[1.75]'}`} />
+                {isActive && (
+                  <span className="absolute -top-2 w-8 h-1 bg-emerald-400 rounded-full shadow-[0_0_10px_#10b981]" />
+                )}
+                <div className={`p-1.5 rounded-xl transition ${
+                  isActive ? 'bg-emerald-500/15 text-emerald-400' : 'text-slate-400'
+                }`}>
+                  <Icon className="w-5 h-5" />
                 </div>
-                <span className={`text-[10px] mt-0.5 ${isActive ? 'font-black' : 'font-medium'}`}>
+                <span className="text-[10px] mt-0.5 tracking-tight font-medium">
                   {tab.label}
                 </span>
-                {isActive && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 absolute -bottom-1" />
-                )}
               </button>
             );
           })}
         </nav>
 
+        {/* Bottom Spacing Pad */}
+        <div className="h-16 w-full" />
+
       </div>
     </div>
   );
 }
-

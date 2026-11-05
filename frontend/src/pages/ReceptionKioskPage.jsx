@@ -21,6 +21,8 @@ import {
 import { api } from '../services/api';
 
 export default function ReceptionKioskPage({ 
+  currentGymId,
+  currentGym,
   onOpenScanner, 
   onOpenManualCheckin, 
   onOpenNewMember, 
@@ -29,17 +31,20 @@ export default function ReceptionKioskPage({
 }) {
   const [rush, setRush] = useState({ count: 4, level: 'Light', badgeColor: 'emerald', capacityPercent: 8 });
   const [recentCheckins, setRecentCheckins] = useState([]);
+  const [branchMembers, setBranchMembers] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const fetchKioskData = async () => {
     try {
       setLoading(true);
-      const [rushRes, recentsRes] = await Promise.all([
+      const [rushRes, recentsRes, membersRes] = await Promise.all([
         api.getFloorRush(),
-        api.getRecentCheckins()
+        api.getRecentCheckins(),
+        api.getMembers('all')
       ]);
       setRush(rushRes);
-      setRecentCheckins(recentsRes);
+      setRecentCheckins(recentsRes || []);
+      setBranchMembers(membersRes || []);
     } catch (e) {
       console.error('Fetch kiosk error:', e);
     } finally {
@@ -51,7 +56,7 @@ export default function ReceptionKioskPage({
     fetchKioskData();
     const interval = setInterval(fetchKioskData, 15000); // 15s refresh
     return () => clearInterval(interval);
-  }, []);
+  }, [currentGymId]);
 
   // Quick simulated scan for quick reception testing
   const handleSimulatedScan = async (code) => {
@@ -72,9 +77,9 @@ export default function ReceptionKioskPage({
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-widest uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-              Reception Tablet Desk
+              {currentGym?.name || 'Reception Tablet Desk'}
             </span>
-            <span className="text-xs text-slate-400 font-medium">Zero-Hardware Deployment</span>
+            <span className="text-xs text-slate-400 font-medium">{currentGym?.city ? `${currentGym.city} Facility` : 'Zero-Hardware Deployment'}</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight brand-font">
             Member Access & Attendance Gate
@@ -255,77 +260,56 @@ export default function ReceptionKioskPage({
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-            <button
-              onClick={() => handleSimulatedScan('EG-1001')}
-              className="p-3 rounded-2xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-left transition-all"
-            >
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-xs text-white">EG-1001</span>
-                <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500 text-slate-950 font-black">+20 Pts</span>
-              </div>
-              <p className="text-[11px] text-emerald-300 font-medium mt-1">Vigneshwaran K</p>
-              <p className="text-[10px] text-slate-400">Active (45 days left)</p>
-            </button>
+            {branchMembers && branchMembers.length > 0 ? (
+              branchMembers.slice(0, 6).map((m) => {
+                let badgeBg = 'bg-emerald-500 text-slate-950';
+                let cardBg = 'bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/30';
+                let textColor = 'text-emerald-300';
+                let badgeText = '+20 Pts';
+                let subText = `Active (${m.days_left !== undefined ? m.days_left : 30}d left)`;
 
-            <button
-              onClick={() => handleSimulatedScan('EG-1002')}
-              className="p-3 rounded-2xl bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-left transition-all"
-            >
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-xs text-white">EG-1002</span>
-                <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500 text-slate-950 font-black">Re-Entry</span>
-              </div>
-              <p className="text-[11px] text-blue-300 font-medium mt-1">Aravind Swamy</p>
-              <p className="text-[10px] text-slate-400">Already logged today</p>
-            </button>
+                if (m.status === 'grace') {
+                  badgeBg = 'bg-yellow-500 text-slate-950';
+                  cardBg = 'bg-yellow-500/10 hover:bg-yellow-500/20 border-yellow-500/30';
+                  textColor = 'text-yellow-300';
+                  badgeText = 'Grace';
+                  subText = 'Permitted (Overdue)';
+                } else if (m.status === 'expired' || (m.days_left !== undefined && m.days_left < -2)) {
+                  badgeBg = 'bg-rose-500 text-white';
+                  cardBg = 'bg-rose-500/10 hover:bg-rose-500/20 border-rose-500/30';
+                  textColor = 'text-rose-300';
+                  badgeText = 'Blocked';
+                  subText = 'Expired Plan';
+                } else if (m.is_frozen === 1 || m.status === 'frozen') {
+                  badgeBg = 'bg-purple-500 text-white';
+                  cardBg = 'bg-purple-500/10 hover:bg-purple-500/20 border-purple-500/30';
+                  textColor = 'text-purple-300';
+                  badgeText = 'Frozen';
+                  subText = 'Membership Paused';
+                }
 
-            <button
-              onClick={() => handleSimulatedScan('EG-1005')}
-              className="p-3 rounded-2xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-left transition-all"
-            >
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-xs text-white">EG-1005</span>
-                <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500 text-slate-950 font-black">3d Left</span>
+                return (
+                  <button
+                    key={m.id}
+                    onClick={() => handleSimulatedScan(m.member_code)}
+                    className={`p-3 rounded-2xl ${cardBg} border text-left transition-all`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-xs text-white">{m.member_code}</span>
+                      <span className={`text-[9px] px-1.5 py-0.5 rounded font-black ${badgeBg}`}>
+                        {badgeText}
+                      </span>
+                    </div>
+                    <p className={`text-[11px] font-medium mt-1 truncate ${textColor}`}>{m.name}</p>
+                    <p className="text-[10px] text-slate-400 truncate">{subText}</p>
+                  </button>
+                );
+              })
+            ) : (
+              <div className="col-span-full py-4 text-center text-xs text-slate-500">
+                Loading branch verification passes...
               </div>
-              <p className="text-[11px] text-amber-300 font-medium mt-1">Mohan Babu</p>
-              <p className="text-[10px] text-slate-400">Urgent Renewal Target</p>
-            </button>
-
-            <button
-              onClick={() => handleSimulatedScan('EG-1007')}
-              className="p-3 rounded-2xl bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/30 text-left transition-all"
-            >
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-xs text-white">EG-1007</span>
-                <span className="text-[9px] px-1.5 py-0.5 rounded bg-yellow-500 text-slate-950 font-black">Grace 1d</span>
-              </div>
-              <p className="text-[11px] text-yellow-300 font-medium mt-1">Saravanan R</p>
-              <p className="text-[10px] text-slate-400">Permitted (Overdue Warning)</p>
-            </button>
-
-            <button
-              onClick={() => handleSimulatedScan('EG-1008')}
-              className="p-3 rounded-2xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-left transition-all"
-            >
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-xs text-white">EG-1008</span>
-                <span className="text-[9px] px-1.5 py-0.5 rounded bg-rose-500 text-white font-black">Blocked</span>
-              </div>
-              <p className="text-[11px] text-rose-300 font-medium mt-1">Praveen Kumar</p>
-              <p className="text-[10px] text-slate-400">Expired 15 days ago</p>
-            </button>
-
-            <button
-              onClick={() => handleSimulatedScan('EG-1009')}
-              className="p-3 rounded-2xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-left transition-all"
-            >
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-xs text-white">EG-1009</span>
-                <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-500 text-white font-black">Frozen</span>
-              </div>
-              <p className="text-[11px] text-purple-300 font-medium mt-1">Deepak Raj</p>
-              <p className="text-[10px] text-slate-400">Membership Paused</p>
-            </button>
+            )}
           </div>
         </div>
 

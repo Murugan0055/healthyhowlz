@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { api } from '../services/api';
 
-export default function SettingsPage() {
+export default function SettingsPage({ currentGymId, currentGym }) {
   const [settings, setSettings] = useState({
     gym_name: 'Elite Fitness Center',
     gym_address: 'Plot 14, Katpadi Main Road, Near New Bus Stand, Gudiyatham - 632602',
@@ -63,7 +63,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [currentGymId]);
 
   const handleSave = async (e) => {
     e.preventDefault();

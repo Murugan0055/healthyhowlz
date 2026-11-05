@@ -1,15 +1,21 @@
 import React, { useState } from 'react';
-import { useTrainerAuth, DEMO_TRAINERS } from './TrainerAuthContext';
+import { useTrainerAuth } from './TrainerAuthContext';
 import ClientRosterTab from './tabs/ClientRosterTab';
 import PtPunchInTab from './tabs/PtPunchInTab';
 import EarningsDashboardTab from './tabs/EarningsDashboardTab';
 import WorkoutDietBuilderTab from './tabs/WorkoutDietBuilderTab';
+import PwaInstallButton from '../components/PwaInstallButton';
+import { Building2, LogOut } from 'lucide-react';
 
-export default function TrainerApp({ onSwitchToAdmin, onSwitchToClient }) {
-  const { trainer, switchTrainer, logout } = useTrainerAuth();
+export default function TrainerApp({ onLogout }) {
+  const { trainer, logout } = useTrainerAuth();
   const [activeTab, setActiveTab] = useState('roster'); // 'roster' | 'punchin' | 'earnings' | 'builder'
   const [ptTargetMember, setPtTargetMember] = useState(null);
-  const [isTrainerMenuOpen, setIsTrainerMenuOpen] = useState(false);
+
+  const handleLogout = () => {
+    logout();
+    if (onLogout) onLogout();
+  };
 
   const handleSelectMemberForPt = (member) => {
     setPtTargetMember(member);
@@ -30,22 +36,37 @@ export default function TrainerApp({ onSwitchToAdmin, onSwitchToClient }) {
       <header className="sticky top-0 z-40 bg-[#0c121e]/90 backdrop-blur-md border-b border-slate-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3">
           
-          {/* Left: Branding */}
+          {/* Left: Branding & Facility Switcher */}
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-400 text-slate-950 font-black text-lg flex items-center justify-center shadow-lg shadow-emerald-500/20">
               🏋️
             </div>
-            <div>
+            <div className="hidden sm:block">
               <div className="flex items-center gap-2">
                 <span className="font-black text-sm tracking-tight text-white uppercase">
-                  Elite Fitness Club
+                  HEALTHYHOWLZ
                 </span>
                 <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold">
                   App 3 • Floor Coach
                 </span>
               </div>
               <div className="text-[10px] text-slate-400 tracking-wider">
-                GUDIYATHAM • ZERO-HARDWARE SYSTEM
+                COACH OPERATING SYSTEM
+              </div>
+            </div>
+
+            {/* Fixed Assigned Facility Badge (Trainers belong to their gym; managed from admin) */}
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900/90 border border-slate-700/80 text-xs shadow-sm">
+              <div className="w-5 h-5 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400">
+                <Building2 className="w-3.5 h-3.5" />
+              </div>
+              <div className="flex flex-col text-left leading-tight">
+                <span className="font-semibold text-slate-200 truncate max-w-[130px] sm:max-w-[190px]">
+                  {trainer?.gym_name || 'HealthyHowlz Facility'}
+                </span>
+                <span className="text-[10px] text-emerald-400 font-medium">
+                  {trainer?.gym_city ? `${trainer.gym_city} Branch` : 'Assigned Branch'}
+                </span>
               </div>
             </div>
           </div>
@@ -55,10 +76,7 @@ export default function TrainerApp({ onSwitchToAdmin, onSwitchToClient }) {
             {navItems.map((item) => (
               <button
                 key={item.id}
-                onClick={() => {
-                  setActiveTab(item.id);
-                  setIsTrainerMenuOpen(false);
-                }}
+                onClick={() => setActiveTab(item.id)}
                 className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 relative ${
                   activeTab === item.id
                     ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
@@ -76,86 +94,35 @@ export default function TrainerApp({ onSwitchToAdmin, onSwitchToClient }) {
             ))}
           </nav>
 
-          {/* Right: Active Trainer Switcher & Portals */}
-          <div className="flex items-center gap-2">
+          {/* Right: Active Coach Badge, PWA Install & Sign Out */}
+          <div className="flex items-center gap-2 sm:gap-3">
             
-            {/* Quick Demo Trainer Switcher Dropdown */}
-            <div className="relative">
-              <button
-                onClick={() => setIsTrainerMenuOpen(!isTrainerMenuOpen)}
-                className="flex items-center gap-2 p-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-slate-900 border border-slate-700 hover:border-emerald-500 transition-all text-xs"
-              >
-                <div className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs">
-                  {trainer.name.charAt(0)}
+            {/* Coach Profile Badge */}
+            <div className="flex items-center gap-2 p-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-slate-900/90 border border-slate-700/80 text-xs shadow-sm">
+              <div className="w-6 h-6 rounded-lg bg-teal-500/20 text-teal-300 flex items-center justify-center font-bold text-xs border border-teal-500/30">
+                {trainer?.name ? trainer.name.charAt(0) : '🏋️'}
+              </div>
+              <div className="text-left hidden sm:block">
+                <div className="font-bold text-slate-200 text-xs leading-none">
+                  {trainer?.name || 'Assigned Coach'}
                 </div>
-                <div className="text-left hidden sm:block">
-                  <div className="font-bold text-slate-200 text-xs leading-none">
-                    {trainer.name.split(' ')[0]}
-                  </div>
-                  <div className="text-[9px] text-emerald-400 font-mono leading-none mt-0.5">
-                    PIN: {trainer.security_pin || trainer.pin || '5555'}
-                  </div>
+                <div className="text-[10px] text-teal-400 font-medium leading-none mt-0.5">
+                  Floor Coach
                 </div>
-                <span className="text-slate-500 text-[10px]">▼</span>
-              </button>
-
-              {isTrainerMenuOpen && (
-                <div className="absolute right-0 mt-2 w-64 bg-[#0e1626] border border-slate-700 rounded-2xl shadow-2xl p-2 z-50">
-                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 py-1 mb-1">
-                    Switch Active Coach
-                  </div>
-                  {DEMO_TRAINERS.map((t) => (
-                    <button
-                      key={t.id}
-                      onClick={() => {
-                        switchTrainer(t);
-                        setIsTrainerMenuOpen(false);
-                      }}
-                      className={`w-full text-left p-2 rounded-xl text-xs transition-all flex items-center justify-between ${
-                        trainer.id === t.id
-                          ? 'bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30'
-                          : 'text-slate-300 hover:bg-slate-800'
-                      }`}
-                    >
-                      <div>
-                        <div className="font-bold">{t.name}</div>
-                        <div className="text-[10px] text-slate-400">{t.tagline}</div>
-                      </div>
-                      <span className="text-[10px] font-mono text-emerald-400">
-                        {t.pin}
-                      </span>
-                    </button>
-                  ))}
-
-                  <div className="pt-2 mt-2 border-t border-slate-800 flex items-center justify-between px-1 text-xs">
-                    <button
-                      onClick={logout}
-                      className="text-rose-400 hover:text-rose-300 text-xs font-semibold"
-                    >
-                      Sign Out
-                    </button>
-                  </div>
-                </div>
-              )}
+              </div>
             </div>
 
-            {/* Portal Switcher Dropdown / Buttons */}
-            <button
-              onClick={onSwitchToAdmin}
-              className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs text-slate-300 transition-all"
-              title="Open Admin & Owner Portal"
-            >
-              <span>🏢</span>
-              <span>Admin Portal</span>
-            </button>
+            {/* PWA Install Button */}
+            <PwaInstallButton compact={true} variant="navbar" />
 
+            {/* Clean Sign Out Button */}
             <button
-              onClick={onSwitchToClient}
-              className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs text-slate-300 transition-all"
-              title="Open Client Member App"
+              onClick={handleLogout}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-semibold transition-all active:scale-95"
+              title="Sign Out of Trainer Workspace"
             >
-              <span>📱</span>
-              <span>Client App</span>
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Sign Out</span>
             </button>
 
           </div>
@@ -164,7 +131,7 @@ export default function TrainerApp({ onSwitchToAdmin, onSwitchToClient }) {
       </header>
 
       {/* Main Tab Content */}
-      <main onClick={() => setIsTrainerMenuOpen(false)} className="flex-1 max-w-7xl mx-auto w-full p-4 sm:p-6 lg:p-8">
+      <main className="flex-1 max-w-7xl mx-auto w-full p-4 sm:p-6 lg:p-8">
         {activeTab === 'roster' && (
           <ClientRosterTab
             trainer={trainer}

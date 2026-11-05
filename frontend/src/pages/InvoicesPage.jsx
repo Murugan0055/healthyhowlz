@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { api } from '../services/api';
 
-export default function InvoicesPage({ onViewInvoice }) {
+export default function InvoicesPage({ currentGymId, currentGym, onViewInvoice }) {
   const [invoices, setInvoices] = useState([]);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all'); // 'all', 'membership', 'pos_retail', 'b2b'
@@ -37,7 +37,7 @@ export default function InvoicesPage({ onViewInvoice }) {
 
   useEffect(() => {
     fetchInvoices();
-  }, []);
+  }, [currentGymId]);
 
   // Filter invoices by search and category
   const filteredInvoices = invoices.filter((inv) => {

@@ -1,5 +1,6 @@
 import express from 'express';
 import { getProducts, processPosCheckout } from '../services/posService.js';
+import { getTenantGymId } from '../middleware/tenant.js';
 
 const router = express.Router();
 
@@ -14,11 +15,12 @@ router.get('/products', async (req, res) => {
 
 router.post('/checkout', async (req, res) => {
   try {
+    const gymId = req.body.gym_id || getTenantGymId(req);
     const { items, paymentMethod, customerName, customerPhone, staffId, staffName } = req.body;
     if (!items || !items.length) {
       return res.status(400).json({ error: 'Cart items are required' });
     }
-    const result = await processPosCheckout({ items, paymentMethod, customerName, customerPhone, staffId, staffName });
+    const result = await processPosCheckout({ items, paymentMethod, customerName, customerPhone, staffId, staffName, gymId });
     res.json(result);
   } catch (err) {
     console.error('POS checkout error:', err);

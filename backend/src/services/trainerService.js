@@ -2,24 +2,34 @@ import { getDb } from '../db/database.js';
 import { v4 as uuidv4 } from 'uuid';
 
 export const trainerService = {
-  // Get all active trainers
-  async getTrainers() {
+  // Get all active trainers (optionally filtered by gym)
+  async getTrainers(gymId = null) {
     const db = await getDb();
-    return db.all(
-      `SELECT id, name, role, phone, email, security_pin, commission_rate, base_salary
-       FROM staff
-       WHERE role = 'trainer' AND is_active = 1
-       ORDER BY name ASC`
-    );
+    let query = `
+      SELECT s.id, s.name, s.role, s.phone, s.email, s.security_pin, s.commission_rate, s.base_salary, s.gym_id,
+             g.name as gym_name, g.city as gym_city
+      FROM staff s
+      LEFT JOIN gyms g ON s.gym_id = g.id
+      WHERE s.role = 'trainer' AND s.is_active = 1
+    `;
+    const params = [];
+    if (gymId && gymId !== 'all') {
+      query += ` AND s.gym_id = ?`;
+      params.push(gymId);
+    }
+    query += ` ORDER BY s.name ASC`;
+    return db.all(query, params);
   },
 
   // Authenticate trainer by phone & PIN
   async loginTrainer(phone, securityPin) {
     const db = await getDb();
     const trainer = await db.get(
-      `SELECT id, name, role, phone, email, security_pin, commission_rate, base_salary
-       FROM staff
-       WHERE phone = ? AND is_active = 1`,
+      `SELECT s.id, s.name, s.role, s.phone, s.email, s.security_pin, s.commission_rate, s.base_salary, s.gym_id,
+              g.name as gym_name, g.city as gym_city
+       FROM staff s
+       LEFT JOIN gyms g ON s.gym_id = g.id
+       WHERE s.phone = ? AND s.is_active = 1`,
       [phone]
     );
 
@@ -38,9 +48,11 @@ export const trainerService = {
   async getTrainerProfile(trainerId) {
     const db = await getDb();
     const trainer = await db.get(
-      `SELECT id, name, role, phone, email, commission_rate, base_salary
-       FROM staff
-       WHERE id = ?`,
+      `SELECT s.id, s.name, s.role, s.phone, s.email, s.commission_rate, s.base_salary, s.gym_id,
+              g.name as gym_name, g.city as gym_city
+       FROM staff s
+       LEFT JOIN gyms g ON s.gym_id = g.id
+       WHERE s.id = ?`,
       [trainerId]
     );
 

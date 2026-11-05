@@ -21,19 +21,22 @@ import ExpensesPage from './pages/ExpensesPage';
 import UsersManagementPage from './pages/UsersManagementPage';
 import SettingsPage from './pages/SettingsPage';
 
+// Contexts & Applications
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { MemberAuthProvider, useMemberAuth } from './client/MemberAuthContext';
+import { MemberAuthProvider } from './client/MemberAuthContext';
 import ClientPwaApp from './client/ClientPwaApp';
-import ClientLogin from './client/ClientLogin';
 
-import { TrainerAuthProvider, useTrainerAuth } from './trainer/TrainerAuthContext';
+import { TrainerAuthProvider } from './trainer/TrainerAuthContext';
 import TrainerApp from './trainer/TrainerApp';
-import TrainerLogin from './trainer/TrainerLogin';
+
+import { TenantProvider, useTenant } from './context/TenantContext';
+import PlatformAdminApp from './platform/PlatformAdminApp';
 
 import { api } from './services/api';
 
-function MainAppLayout({ onSwitchToClient, onSwitchToTrainer }) {
-  const { user, isSuperAdmin, isOwner, isManager } = useAuth();
+function MainAppLayout({ onLogout, onSwitchToPlatform }) {
+  const { user, isSuperAdmin, isOwner, isManager, logout } = useAuth();
+  const { currentGymId, currentGym } = useTenant();
   const [activeTab, setActiveTab] = useState('kiosk');
 
   // Modals state
@@ -68,6 +71,11 @@ function MainAppLayout({ onSwitchToClient, onSwitchToTrainer }) {
     setHudResult(result);
   };
 
+  const handleSignOut = () => {
+    if (onLogout) onLogout();
+    else logout();
+  };
+
   return (
     <div className="min-h-screen bg-[#0b0f17] text-slate-100 flex flex-col selection:bg-emerald-500 selection:text-white">
       
@@ -76,14 +84,16 @@ function MainAppLayout({ onSwitchToClient, onSwitchToTrainer }) {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onOpenManualCheckin={handleOpenManualCheckin}
-        onSwitchToClient={onSwitchToClient}
-        onSwitchToTrainer={onSwitchToTrainer}
+        onSwitchToPlatform={onSwitchToPlatform}
       />
 
-      {/* Main App Content View */}
-      <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+      {/* Main App Content View - Dynamically keyed to active gym */}
+      <main key={currentGymId} className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
         {activeTab === 'kiosk' && (
           <ReceptionKioskPage
+            key={`kiosk-${currentGymId}`}
+            currentGymId={currentGymId}
+            currentGym={currentGym}
             onOpenScanner={() => setIsScannerOpen(true)}
             onOpenManualCheckin={handleOpenManualCheckin}
             onOpenNewMember={() => setIsNewMemberOpen(true)}
@@ -94,17 +104,27 @@ function MainAppLayout({ onSwitchToClient, onSwitchToTrainer }) {
 
         {activeTab === 'dashboard' && (
           <DashboardPage
+            key={`dashboard-${currentGymId}`}
+            currentGymId={currentGymId}
+            currentGym={currentGym}
             onOpenCashReconcile={() => setIsCashReconcileOpen(true)}
             onViewInvoice={(inv) => setActiveInvoice(inv)}
           />
         )}
 
         {activeTab === 'crm' && (
-          <LeadsCrmPage />
+          <LeadsCrmPage
+            key={`crm-${currentGymId}`}
+            currentGymId={currentGymId}
+            currentGym={currentGym}
+          />
         )}
 
         {activeTab === 'members' && (
           <MembersPage
+            key={`members-${currentGymId}`}
+            currentGymId={currentGymId}
+            currentGym={currentGym}
             onOpenNewMember={() => setIsNewMemberOpen(true)}
             onRenewMember={(mem) => setRenewMemberTarget(mem)}
             onCheckinResult={(res) => setHudResult(res)}
@@ -113,52 +133,69 @@ function MainAppLayout({ onSwitchToClient, onSwitchToTrainer }) {
 
         {activeTab === 'expiry' && (
           <ExpiryAlertsPage
+            key={`expiry-${currentGymId}`}
+            currentGymId={currentGymId}
+            currentGym={currentGym}
             onRenewMember={(mem) => setRenewMemberTarget(mem)}
           />
         )}
 
         {activeTab === 'pos' && (
           <PosRetailPage
+            key={`pos-${currentGymId}`}
+            currentGymId={currentGymId}
+            currentGym={currentGym}
             onViewInvoice={(inv) => setActiveInvoice(inv)}
           />
         )}
 
         {activeTab === 'invoices' && (
           <InvoicesPage
+            key={`invoices-${currentGymId}`}
+            currentGymId={currentGymId}
+            currentGym={currentGym}
             onViewInvoice={(inv) => setActiveInvoice(inv)}
           />
         )}
 
         {activeTab === 'expenses' && (
-          <ExpensesPage />
+          <ExpensesPage
+            key={`expenses-${currentGymId}`}
+            currentGymId={currentGymId}
+            currentGym={currentGym}
+          />
         )}
 
         {activeTab === 'users' && isManager && (
-          <UsersManagementPage />
+          <UsersManagementPage
+            key={`users-${currentGymId}`}
+            currentGymId={currentGymId}
+            currentGym={currentGym}
+          />
         )}
 
         {activeTab === 'settings' && (
-          <SettingsPage />
+          <SettingsPage
+            key={`settings-${currentGymId}`}
+            currentGymId={currentGymId}
+            currentGym={currentGym}
+          />
         )}
       </main>
 
       {/* MODALS */}
-
-      {/* 1. On-Demand Camera QR Scanner Modal */}
       <KioskScannerModal
         isOpen={isScannerOpen}
         onClose={() => setIsScannerOpen(false)}
         onScanSuccess={handleScanSuccess}
       />
 
-      {/* 2. Visual Status HUD Modal (Green / Blue / Yellow / Red) */}
       <StatusHudModal
         result={hudResult}
         onClose={() => setHudResult(null)}
         onRenewClick={(member) => setRenewMemberTarget(member)}
       />
 
-      {/* 3. Protected Manual Check-in Modal (Officer PIN Security Gate - Fresh PIN required on EVERY click) */}
       <ManualCheckinModal
         key={`manual-checkin-session-${manualCheckinKey}`}
         isOpen={isManualCheckinOpen}
@@ -166,20 +203,17 @@ function MainAppLayout({ onSwitchToClient, onSwitchToTrainer }) {
         onCheckinComplete={handleManualCheckinComplete}
       />
 
-      {/* 4. GST Invoice / Receipt Modal */}
       <InvoiceModal
         invoice={activeInvoice}
         onClose={() => setActiveInvoice(null)}
       />
 
-      {/* 5. Register New Member Modal */}
       <NewMemberModal
         isOpen={isNewMemberOpen}
         onClose={() => setIsNewMemberOpen(false)}
         onCreated={() => {}}
       />
 
-      {/* 6. Renew Membership Modal (with Loyalty points slider up to 15% cap) */}
       <RenewModal
         member={renewMemberTarget}
         isOpen={!!renewMemberTarget}
@@ -187,36 +221,39 @@ function MainAppLayout({ onSwitchToClient, onSwitchToTrainer }) {
         onRenewed={() => {}}
       />
 
-      {/* 7. EOD Cash-in-Drawer Reconciliation Modal */}
       <CashReconcileModal
         isOpen={isCashReconcileOpen}
         onClose={() => setIsCashReconcileOpen(false)}
         onReconciled={() => {}}
       />
 
-      {/* Footer Branding */}
+      {/* Production Footer Branding */}
       <footer className="no-print border-t border-slate-800/80 py-4 px-6 text-center text-xs text-slate-500">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
-          <p>© 2026 Elite Fitness Center Gudiyatham • Operating Platform App 1: Admin & Owner Engine</p>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={onSwitchToTrainer}
-              className="text-emerald-400 hover:text-emerald-300 font-semibold underline underline-offset-2 text-xs flex items-center gap-1"
-            >
-              <span>🏋️</span>
-              <span>Trainer & Floor Coach App (App 3) →</span>
-            </button>
-            <span className="text-slate-600">•</span>
-            <button
-              onClick={onSwitchToClient}
-              className="text-slate-400 hover:text-white font-semibold underline underline-offset-2 text-xs"
-            >
-              Client Member App (App 2) →
-            </button>
-            <span className="text-slate-600">•</span>
+          <p>© 2026 HealthyHowlz Fitness OS • Multi-Tenant Facility Management Engine</p>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            {isSuperAdmin && onSwitchToPlatform && (
+              <>
+                <button
+                  onClick={onSwitchToPlatform}
+                  className="text-purple-400 hover:text-purple-300 font-semibold underline underline-offset-2 text-xs flex items-center gap-1"
+                >
+                  <span>🐺</span>
+                  <span>HealthyHowlz Platform HQ →</span>
+                </button>
+                <span className="text-slate-600">•</span>
+              </>
+            )}
             <p className="text-slate-400 font-medium">
-              Logged in as: <span className="font-bold text-slate-300">{user?.name} ({user?.role})</span>
+              Authorized: <span className="font-bold text-slate-300">{user?.name} ({user?.role?.toUpperCase()})</span>
             </p>
+            <span className="text-slate-600">•</span>
+            <button
+              onClick={handleSignOut}
+              className="text-rose-400 hover:text-rose-300 font-semibold text-xs transition-colors"
+            >
+              Sign Out
+            </button>
           </div>
         </div>
       </footer>
@@ -225,74 +262,69 @@ function MainAppLayout({ onSwitchToClient, onSwitchToTrainer }) {
   );
 }
 
-function AdminPortalContainer({ onSwitchToClient, onSwitchToTrainer }) {
-  const { isAuthenticated } = useAuth();
-  if (!isAuthenticated) {
-    return <LoginPage onSwitchToClient={onSwitchToClient} onSwitchToTrainer={onSwitchToTrainer} />;
-  }
-  return <MainAppLayout onSwitchToClient={onSwitchToClient} onSwitchToTrainer={onSwitchToTrainer} />;
-}
+/**
+ * Role-Based Application Router
+ * Evaluates authenticated user role and renders corresponding dedicated portal:
+ * - super_admin / platform_admin -> PlatformAdminApp
+ * - trainer -> TrainerApp
+ * - member -> ClientPwaApp
+ * - owner / manager / admin -> MainAppLayout
+ */
+function AppRouter() {
+  const { user, isAuthenticated, logout } = useAuth();
+  const [platformInspectView, setPlatformInspectView] = useState(false);
 
-function ClientPwaContainer({ onSwitchToAdmin, onSwitchToTrainer }) {
-  const { isAuthenticated } = useMemberAuth();
-  if (!isAuthenticated) {
-    return <ClientLogin onSwitchToAdmin={onSwitchToAdmin} />;
+  // 1. Not Authenticated -> Single Production Unified Login Page
+  if (!isAuthenticated || !user) {
+    return <LoginPage />;
   }
-  return <ClientPwaApp onSwitchToAdmin={onSwitchToAdmin} onSwitchToTrainer={onSwitchToTrainer} />;
-}
 
-function TrainerPortalContainer({ onSwitchToAdmin, onSwitchToClient }) {
-  const { isAuthenticated } = useTrainerAuth();
-  if (!isAuthenticated) {
-    return <TrainerLogin onSwitchToAdmin={onSwitchToAdmin} onSwitchToClient={onSwitchToClient} />;
+  // 2. HealthyHowlz Super Admin (Platform HQ Command)
+  if (user.role === 'super_admin' || user.role === 'platform_admin' || user.app === 'platform') {
+    if (platformInspectView) {
+      return (
+        <MainAppLayout
+          onLogout={logout}
+          onSwitchToPlatform={() => setPlatformInspectView(false)}
+        />
+      );
+    }
+    return (
+      <PlatformAdminApp
+        onLogout={logout}
+        onSwitchToAdmin={() => setPlatformInspectView(true)}
+      />
+    );
   }
-  return <TrainerApp onSwitchToAdmin={onSwitchToAdmin} onSwitchToClient={onSwitchToClient} />;
+
+  // 3. Floor Coach & Trainer (Trainer Operating System - App 3)
+  if (user.role === 'trainer' || user.app === 'trainer') {
+    return (
+      <TrainerAuthProvider>
+        <TrainerApp onLogout={logout} />
+      </TrainerAuthProvider>
+    );
+  }
+
+  // 4. Client / Member (Member Mobile PWA - App 2)
+  if (user.role === 'member' || user.app === 'client') {
+    return (
+      <MemberAuthProvider>
+        <ClientPwaApp onLogout={logout} />
+      </MemberAuthProvider>
+    );
+  }
+
+  // 5. Gym Owner, Manager, Front Desk Admin (Gym Operating System - App 1)
+  return <MainAppLayout onLogout={logout} />;
 }
 
 export default function App() {
-  const [portalMode, setPortalMode] = useState(() => {
-    try {
-      const urlParams = new URLSearchParams(window.location.search);
-      const p = urlParams.get('portal');
-      if (p === 'client' || p === 'trainer') return p;
-      return localStorage.getItem('elite_gym_active_portal') || 'admin';
-    } catch (e) {
-      return 'admin';
-    }
-  });
-
-  const handleSwitchPortal = (mode) => {
-    setPortalMode(mode);
-    try {
-      localStorage.setItem('elite_gym_active_portal', mode);
-      const url = new URL(window.location);
-      url.searchParams.set('portal', mode);
-      window.history.replaceState({}, '', url);
-    } catch (e) {}
-  };
-
   return (
-    <AuthProvider>
-      {portalMode === 'trainer' ? (
-        <TrainerAuthProvider>
-          <TrainerPortalContainer
-            onSwitchToAdmin={() => handleSwitchPortal('admin')}
-            onSwitchToClient={() => handleSwitchPortal('client')}
-          />
-        </TrainerAuthProvider>
-      ) : portalMode === 'client' ? (
-        <MemberAuthProvider>
-          <ClientPwaContainer
-            onSwitchToAdmin={() => handleSwitchPortal('admin')}
-            onSwitchToTrainer={() => handleSwitchPortal('trainer')}
-          />
-        </MemberAuthProvider>
-      ) : (
-        <AdminPortalContainer
-          onSwitchToClient={() => handleSwitchPortal('client')}
-          onSwitchToTrainer={() => handleSwitchPortal('trainer')}
-        />
-      )}
-    </AuthProvider>
+    <TenantProvider>
+      <AuthProvider>
+        <AppRouter />
+      </AuthProvider>
+    </TenantProvider>
   );
 }

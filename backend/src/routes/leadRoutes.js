@@ -1,11 +1,13 @@
 import express from 'express';
 import { getKanbanLeads, createLead, updateLeadStage, getWinBackCampaigns, getStaffSalesPerformance } from '../services/crmService.js';
+import { getTenantGymId } from '../middleware/tenant.js';
 
 const router = express.Router();
 
 router.get('/kanban', async (req, res) => {
   try {
-    const data = await getKanbanLeads();
+    const gymId = getTenantGymId(req);
+    const data = await getKanbanLeads(gymId);
     res.json(data);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch Kanban leads' });
@@ -14,7 +16,8 @@ router.get('/kanban', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const lead = await createLead(req.body);
+    const gymId = req.body.gym_id || getTenantGymId(req);
+    const lead = await createLead({ ...req.body, gym_id: gymId });
     res.status(201).json(lead);
   } catch (err) {
     res.status(500).json({ error: 'Failed to create lead' });

@@ -21,7 +21,8 @@ export async function createInvoice({
   collectedByStaffName,
   autoExtendMembership = false,
   extendMonths = 0,
-  extendDays = 0
+  extendDays = 0,
+  gymId = 'gym-gudiyatham'
 }) {
   const db = await getDb();
   const id = uuidv4();
@@ -55,8 +56,8 @@ export async function createInvoice({
       id, invoice_number, member_id, member_name, member_phone, item_type,
       item_description, subtotal, cgst, sgst, discount_amount, loyalty_points_redeemed,
       loyalty_discount_value, grand_total, payment_method, payment_ref, status,
-      b2b_gstin, b2b_company_name, collected_by_staff_id, collected_by_staff_name, created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'paid', ?, ?, ?, ?, datetime('now', 'localtime'))`,
+      b2b_gstin, b2b_company_name, collected_by_staff_id, collected_by_staff_name, gym_id, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'paid', ?, ?, ?, ?, ?, datetime('now', 'localtime'))`,
     [
       id,
       invoiceNumber,
@@ -77,7 +78,8 @@ export async function createInvoice({
       b2bGstin || null,
       b2bCompany || null,
       collectedByStaffId || null,
-      collectedByStaffName || null
+      collectedByStaffName || null,
+      gymId
     ]
   );
 
@@ -114,8 +116,13 @@ export async function getInvoiceById(invoiceId) {
   return await db.get('SELECT * FROM invoices WHERE id = ? OR invoice_number = ?', [invoiceId, invoiceId]);
 }
 
-export async function getInvoicesList(limit = 50) {
+export async function getInvoicesList(limit = 50, gymId) {
   const db = await getDb();
-  return await db.all('SELECT * FROM invoices ORDER BY created_at DESC LIMIT ?', [limit]);
+  const filterGym = gymId && gymId !== 'all';
+  const query = filterGym
+    ? 'SELECT * FROM invoices WHERE gym_id = ? ORDER BY created_at DESC LIMIT ?'
+    : 'SELECT * FROM invoices ORDER BY created_at DESC LIMIT ?';
+  const params = filterGym ? [gymId, limit] : [limit];
+  return await db.all(query, params);
 }
 

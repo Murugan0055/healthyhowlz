@@ -20,36 +20,44 @@ import {
   Play,
   Pause,
   LayoutGrid,
-  List
+  List,
+  Building2,
+  Dumbbell,
+  DollarSign
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useTenant } from '../context/TenantContext';
 
 export default function UsersManagementPage() {
   const { user: currentUser, isSuperAdmin, isOwner } = useAuth();
+  const { currentGymId, currentGym, availableGyms } = useTenant();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [viewMode, setViewMode] = useState('cards'); // 'cards' or 'table'
   const [roleFilter, setRoleFilter] = useState('all');
+  const [gymFilter, setGymFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
   const [form, setForm] = useState({
     name: '',
-    role: 'admin',
+    role: 'trainer',
     phone: '',
     email: '',
     password: '',
-    pin: '1234',
-    commissionRate: 5.0
+    pin: '5555',
+    commissionRate: 20.0,
+    baseSalary: 18000.0,
+    gymId: currentGymId || 'gym-gudiyatham'
   });
 
   const loadUsers = async () => {
     try {
       setLoading(true);
-      const data = await api.getStaff();
-      setUsers(data);
+      const data = await api.getStaff(gymFilter);
+      setUsers(data || []);
     } catch (err) {
       console.error('Failed to load users:', err);
     } finally {
@@ -59,7 +67,7 @@ export default function UsersManagementPage() {
 
   useEffect(() => {
     loadUsers();
-  }, []);
+  }, [gymFilter]);
 
   const handleCreateUser = async (e) => {
     e.preventDefault();
@@ -69,22 +77,27 @@ export default function UsersManagementPage() {
     }
 
     if (form.role === 'super_admin') {
-      alert('Super Admin role cannot be created. Please select Owner, Manager, or Admin.');
+      alert('Super Admin role cannot be created. Please select Owner, Manager, Admin, or Trainer.');
       return;
     }
 
     try {
-      await api.createStaff(form);
-      alert(`🎉 User "${form.name}" with role "${form.role.toUpperCase()}" created successfully!`);
+      await api.createStaff({
+        ...form,
+        gymId: form.gymId || currentGymId || 'gym-gudiyatham'
+      });
+      alert(`🎉 Staff user "${form.name}" (${form.role.toUpperCase()}) created and tracked under facility successfully!`);
       setShowCreateModal(false);
       setForm({
         name: '',
-        role: 'admin',
+        role: 'trainer',
         phone: '',
         email: '',
         password: '',
-        pin: '1234',
-        commissionRate: 5.0
+        pin: '5555',
+        commissionRate: 20.0,
+        baseSalary: 18000.0,
+        gymId: currentGymId || 'gym-gudiyatham'
       });
       loadUsers();
     } catch (err) {
@@ -123,7 +136,12 @@ export default function UsersManagementPage() {
     e.preventDefault();
     if (!editingUser) return;
     try {
-      await api.updateStaff(editingUser.id, editingUser);
+      await api.updateStaff(editingUser.id, {
+        ...editingUser,
+        gymId: editingUser.gym_id,
+        baseSalary: editingUser.base_salary,
+        commissionRate: editingUser.commission_rate
+      });
       alert('User updated successfully');
       setEditingUser(null);
       loadUsers();
@@ -175,8 +193,12 @@ export default function UsersManagementPage() {
     }
   };
 
-  // Filter users by role and search query
+  // Filter users by gym, role and search query
   const filteredUsers = users.filter((u) => {
+    if (gymFilter !== 'all' && u.gym_id && u.gym_id !== gymFilter) {
+      return false;
+    }
+
     if (roleFilter !== 'all') {
       if (roleFilter === 'super_admin' && u.role !== 'super_admin') return false;
       if (roleFilter === 'owner' && u.role !== 'owner') return false;
@@ -255,15 +277,15 @@ export default function UsersManagementPage() {
         <div className="p-4 rounded-2xl bg-[#131b26] border border-slate-800">
           <span className="text-[10px] font-bold uppercase text-slate-400 block">Total Staff</span>
           <p className="text-2xl font-black text-white font-mono mt-0.5">{users.length}</p>
-          <span className="text-[10px] text-slate-500">All registered users</span>
+          <span className="text-[10px] text-slate-500">Across all branches</span>
         </div>
 
-        <div className="p-4 rounded-2xl bg-[#131b26] border border-purple-500/30">
-          <span className="text-[10px] font-bold uppercase text-purple-400 block">Root Super Admin</span>
-          <p className="text-2xl font-black text-purple-300 font-mono mt-0.5">
-            {users.filter(u => u.role === 'super_admin').length}
+        <div className="p-4 rounded-2xl bg-[#131b26] border border-teal-500/30">
+          <span className="text-[10px] font-bold uppercase text-teal-400 block">Floor Coaches</span>
+          <p className="text-2xl font-black text-teal-300 font-mono mt-0.5">
+            {users.filter(u => u.role === 'trainer').length}
           </p>
-          <span className="text-[10px] text-purple-400/80">Protected Root Master</span>
+          <span className="text-[10px] text-teal-400/80">Active Gym Trainers</span>
         </div>
 
         <div className="p-4 rounded-2xl bg-[#131b26] border border-emerald-500/30">
@@ -283,12 +305,12 @@ export default function UsersManagementPage() {
         </div>
       </div>
 
-      {/* Filter Tabs & View Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-800">
+      {/* Filter Tabs, Facility Dropdown & View Controls */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-2 border-b border-slate-800">
         <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
           {[
             { id: 'all', label: 'All Users' },
-            { id: 'super_admin', label: 'Super Admin' },
+            { id: 'trainer', label: '🏋️ Floor Coaches / Trainers' },
             { id: 'owner', label: 'Owners' },
             { id: 'manager', label: 'Managers' },
             { id: 'admin', label: 'Admins / Desk' }
@@ -307,7 +329,24 @@ export default function UsersManagementPage() {
           ))}
         </div>
 
-        <div className="flex items-center gap-2 self-end sm:self-auto">
+        {/* Facility Gym Filter Dropdown */}
+        <div className="flex items-center gap-2 self-start md:self-auto">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs">
+            <Building2 className="w-3.5 h-3.5 text-emerald-400" />
+            <select
+              value={gymFilter}
+              onChange={(e) => setGymFilter(e.target.value)}
+              className="bg-transparent text-emerald-400 font-bold focus:outline-none cursor-pointer text-xs"
+            >
+              <option value="all" className="bg-slate-900 text-white">All Gym Facilities</option>
+              {availableGyms.map((g) => (
+                <option key={g.id} value={g.id} className="bg-slate-900 text-white">
+                  {g.name} ({g.city})
+                </option>
+              ))}
+            </select>
+          </div>
+
           <button
             onClick={loadUsers}
             disabled={loading}
@@ -382,6 +421,16 @@ export default function UsersManagementPage() {
                   <div className="py-3 space-y-2 text-xs">
                     <div className="flex items-center justify-between text-slate-300">
                       <span className="flex items-center gap-1.5 text-slate-400">
+                        <Building2 className="w-3.5 h-3.5 text-emerald-400" />
+                        Assigned Facility:
+                      </span>
+                      <span className="font-semibold text-emerald-300 text-[11px] truncate max-w-[170px]" title={u.gym_name || u.gym_id}>
+                        {u.gym_name || (u.gym_id === 'gym-gudiyatham' ? 'HealthyHowlz Elite' : u.gym_id === 'gym-vellore' ? 'HealthyHowlz Club' : u.gym_id === 'gym-chennai' ? 'HealthyHowlz Arena' : 'All Facilities')}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between text-slate-300">
+                      <span className="flex items-center gap-1.5 text-slate-400">
                         <Phone className="w-3.5 h-3.5 text-slate-500" />
                         Phone:
                       </span>
@@ -407,14 +456,39 @@ export default function UsersManagementPage() {
                       </span>
                     </div>
 
-                    {/* Sales Commission */}
-                    <div className="flex items-center justify-between text-slate-400 text-xs pt-1">
-                      <span className="flex items-center gap-1">
-                        <Percent className="w-3 h-3 text-emerald-400" />
-                        Sales Commission:
-                      </span>
-                      <span className="font-mono font-bold text-emerald-400">{u.commission_rate}%</span>
-                    </div>
+                    {/* Trainer Compensation or Sales Commission */}
+                    {u.role === 'trainer' ? (
+                      <div className="mt-2 p-2.5 rounded-2xl bg-teal-500/10 border border-teal-500/20 space-y-1.5 text-[11px]">
+                        <div className="flex items-center justify-between text-teal-300">
+                          <span className="flex items-center gap-1 text-slate-400">
+                            <DollarSign className="w-3 h-3 text-teal-400" />
+                            Base Salary:
+                          </span>
+                          <span className="font-mono font-bold text-teal-200">
+                            ₹{Number(u.base_salary || 18000).toLocaleString('en-IN')}/mo
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-teal-300">
+                          <span className="flex items-center gap-1 text-slate-400">
+                            <Percent className="w-3 h-3 text-teal-400" />
+                            PT Commission:
+                          </span>
+                          <span className="font-mono font-bold text-teal-200">{u.commission_rate ?? 20}%</span>
+                        </div>
+                        <div className="text-[10px] text-teal-400/80 pt-0.5 flex items-center gap-1">
+                          <Dumbbell className="w-3 h-3" />
+                          <span>Floor Coach (Locked to this facility)</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between text-slate-400 text-xs pt-1">
+                        <span className="flex items-center gap-1">
+                          <Percent className="w-3 h-3 text-emerald-400" />
+                          Sales Commission:
+                        </span>
+                        <span className="font-mono font-bold text-emerald-400">{u.commission_rate}%</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -498,16 +572,39 @@ export default function UsersManagementPage() {
               </div>
 
               <div>
+                <label className="font-semibold text-slate-300 block mb-1">Assigned Facility (Gym Branch) *</label>
+                <div className="relative">
+                  <Building2 className="w-4 h-4 text-emerald-400 absolute left-3 top-2.5 pointer-events-none" />
+                  <select
+                    value={form.gymId}
+                    onChange={(e) => setForm({ ...form, gymId: e.target.value })}
+                    className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-emerald-400 font-bold focus:outline-none"
+                  >
+                    {availableGyms.map((g) => (
+                      <option key={g.id} value={g.id} className="bg-slate-900 text-white">
+                        {g.name} ({g.city})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <span className="text-[10px] text-slate-500 mt-1 block">
+                  {form.role === 'trainer'
+                    ? '📍 Coach will be tracked under and locked to this gym branch.'
+                    : '📍 Staff member will be assigned to operate within this facility.'}
+                </span>
+              </div>
+
+              <div>
                 <label className="font-semibold text-slate-300 block mb-1">Assigned Role *</label>
                 <select
                   value={form.role}
                   onChange={(e) => setForm({ ...form, role: e.target.value })}
                   className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-emerald-400 font-bold focus:outline-none"
                 >
+                  <option value="trainer">Trainer / Floor Coach</option>
                   <option value="admin">Admin (Front Desk Operations & Kiosk)</option>
                   <option value="manager">Manager (Operations, Leads & Finances)</option>
                   <option value="owner">Owner (Full Business Authority)</option>
-                  <option value="trainer">Trainer / Floor Coach</option>
                 </select>
                 <span className="text-[10px] text-slate-500 mt-1 block">
                   * Note: Another Super Admin cannot be created. Super Admin is root system authority.
@@ -564,16 +661,50 @@ export default function UsersManagementPage() {
                 </div>
               </div>
 
-              <div>
-                <label className="font-semibold text-slate-300 block mb-1">Sales Commission Rate (%)</label>
-                <input
-                  type="number"
-                  step="0.5"
-                  value={form.commissionRate}
-                  onChange={(e) => setForm({ ...form, commissionRate: parseFloat(e.target.value) })}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white focus:outline-none focus:border-emerald-500"
-                />
-              </div>
+              {form.role === 'trainer' ? (
+                <div className="p-3 rounded-2xl bg-teal-500/10 border border-teal-500/20 space-y-2.5">
+                  <div className="flex items-center gap-1.5 text-teal-300 font-bold text-xs">
+                    <Dumbbell className="w-3.5 h-3.5" />
+                    <span>Floor Coach Compensation & Gym Assignment</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="font-semibold text-slate-300 block mb-1">Base Salary (₹/mo)</label>
+                      <input
+                        type="number"
+                        step="500"
+                        value={form.baseSalary}
+                        onChange={(e) => setForm({ ...form, baseSalary: parseFloat(e.target.value) || 0 })}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono focus:outline-none focus:border-teal-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="font-semibold text-slate-300 block mb-1">PT Commission (%)</label>
+                      <input
+                        type="number"
+                        step="1"
+                        value={form.commissionRate}
+                        onChange={(e) => setForm({ ...form, commissionRate: parseFloat(e.target.value) || 0 })}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono focus:outline-none focus:border-teal-500"
+                      />
+                    </div>
+                  </div>
+                  <span className="text-[10px] text-teal-400/80 block">
+                    Coach will access the Coach Operating System exclusively for the selected facility without cross-branch switching.
+                  </span>
+                </div>
+              ) : (
+                <div>
+                  <label className="font-semibold text-slate-300 block mb-1">Sales Commission Rate (%)</label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    value={form.commissionRate}
+                    onChange={(e) => setForm({ ...form, commissionRate: parseFloat(e.target.value) })}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+              )}
 
               <button
                 type="submit"
@@ -603,6 +734,24 @@ export default function UsersManagementPage() {
 
             <form onSubmit={handleUpdateUser} className="mt-4 space-y-3.5 text-xs">
               <div>
+                <label className="font-semibold text-slate-300 block mb-1">Assigned Facility (Gym Branch) *</label>
+                <div className="relative">
+                  <Building2 className="w-4 h-4 text-emerald-400 absolute left-3 top-2.5 pointer-events-none" />
+                  <select
+                    value={editingUser.gym_id || 'gym-gudiyatham'}
+                    onChange={(e) => setEditingUser({ ...editingUser, gym_id: e.target.value })}
+                    className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-emerald-400 font-bold focus:outline-none"
+                  >
+                    {availableGyms.map((g) => (
+                      <option key={g.id} value={g.id} className="bg-slate-900 text-white">
+                        {g.name} ({g.city})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
                 <label className="font-semibold text-slate-300 block mb-1">Full Name *</label>
                 <input
                   type="text"
@@ -625,10 +774,10 @@ export default function UsersManagementPage() {
                     onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value })}
                     className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white focus:outline-none"
                   >
+                    <option value="trainer">Trainer / Floor Coach</option>
                     <option value="admin">Admin (Front Desk Operations & Kiosk)</option>
                     <option value="manager">Manager (Operations, Leads & Finances)</option>
                     <option value="owner">Owner (Full Business Authority)</option>
-                    <option value="trainer">Trainer / Floor Coach</option>
                   </select>
                 )}
               </div>
@@ -666,17 +815,50 @@ export default function UsersManagementPage() {
                     className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-amber-400 font-mono tracking-widest focus:outline-none focus:border-emerald-500"
                   />
                 </div>
-                <div>
-                  <label className="font-semibold text-slate-300 block mb-1">Commission Rate (%)</label>
-                  <input
-                    type="number"
-                    step="0.5"
-                    value={editingUser.commission_rate}
-                    onChange={(e) => setEditingUser({ ...editingUser, commission_rate: parseFloat(e.target.value) })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white focus:outline-none focus:border-emerald-500"
-                  />
-                </div>
+                {editingUser.role !== 'trainer' && (
+                  <div>
+                    <label className="font-semibold text-slate-300 block mb-1">Commission Rate (%)</label>
+                    <input
+                      type="number"
+                      step="0.5"
+                      value={editingUser.commission_rate}
+                      onChange={(e) => setEditingUser({ ...editingUser, commission_rate: parseFloat(e.target.value) })}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                )}
               </div>
+
+              {editingUser.role === 'trainer' && (
+                <div className="p-3 rounded-2xl bg-teal-500/10 border border-teal-500/20 space-y-2 text-xs">
+                  <div className="flex items-center gap-1.5 text-teal-300 font-bold">
+                    <Dumbbell className="w-3.5 h-3.5" />
+                    <span>Coach Salary & PT Commission</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="font-semibold text-slate-300 block mb-1">Base Monthly Salary (₹)</label>
+                      <input
+                        type="number"
+                        step="500"
+                        value={editingUser.base_salary ?? 18000}
+                        onChange={(e) => setEditingUser({ ...editingUser, base_salary: parseFloat(e.target.value) || 0 })}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono focus:outline-none focus:border-teal-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="font-semibold text-slate-300 block mb-1">PT Commission (%)</label>
+                      <input
+                        type="number"
+                        step="1"
+                        value={editingUser.commission_rate ?? 20}
+                        onChange={(e) => setEditingUser({ ...editingUser, commission_rate: parseFloat(e.target.value) || 0 })}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono focus:outline-none focus:border-teal-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <button
                 type="submit"

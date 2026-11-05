@@ -1,16 +1,18 @@
 {
-  "name": "elite-gym-operating-platform",
+  "name": "healthyhowlz-fitness-os",
   "version": "1.0.0",
-  "description": "Elite Gym Operating Platform - Gudiyatham (App 1: Admin & Owner Portal)",
+  "description": "HealthyHowlz Multi-Tenant Fitness OS (Platform Admin, Gym OS, Floor Coach, Member PWA)",
   "scripts": {
     "start": "node backend/src/server.js",
     "seed": "node backend/src/db/seed.js",
-    "dev:backend": "cd backend && npm run dev",
-    "dev:frontend": "cd frontend && npm run dev",
-    "build:frontend": "cd frontend && npm run build"
+    "build": "npm run build --prefix frontend",
+    "dev:backend": "npm run dev --prefix backend",
+    "dev:frontend": "npm run dev --prefix frontend",
+    "build:frontend": "npm run build --prefix frontend",
+    "deploy": "bash scripts/deploy.sh"
   },
-  "keywords": ["gym-management", "gudiyatham", "pos", "qr-attendance", "crm"],
-  "author": "Elite Fitness Center",
+  "keywords": ["healthyhowlz", "gym-management", "multi-tenant", "pos", "qr-attendance", "crm", "pwa"],
+  "author": "HealthyHowlz Fitness OS",
   "license": "ISC"
 }
 

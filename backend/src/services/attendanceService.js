@@ -1,7 +1,7 @@
 import { getDb } from '../db/database.js';
 import { v4 as uuidv4 } from 'uuid';
 
-export async function verifyQrToken(tokenString) {
+export async function verifyQrToken(tokenString, targetGymId = null) {
   const db = await getDb();
   let memberIdentifier = tokenString?.trim();
 
@@ -15,14 +15,30 @@ export async function verifyQrToken(tokenString) {
     }
   }
 
-  // Lookup member
-  const member = await db.get(
-    `SELECT m.*, p.name as plan_title 
+  // Lookup member (scoped by gym if provided)
+  let lookupQuery = `SELECT m.*, p.name as plan_title 
      FROM members m 
      LEFT JOIN membership_plans p ON m.plan_id = p.id 
-     WHERE m.id = ? OR m.member_code = ? OR m.phone = ?`,
-    [memberIdentifier, memberIdentifier, memberIdentifier]
-  );
+     WHERE (m.id = ? OR m.member_code = ? OR m.phone = ?)`;
+  const lookupParams = [memberIdentifier, memberIdentifier, memberIdentifier];
+
+  if (targetGymId && targetGymId !== 'all') {
+    lookupQuery += ` AND m.gym_id = ?`;
+    lookupParams.push(targetGymId);
+  }
+
+  let member = await db.get(lookupQuery, lookupParams);
+
+  // If not found in target gym, try global lookup as fallback
+  if (!member && targetGymId) {
+    member = await db.get(
+      `SELECT m.*, p.name as plan_title 
+       FROM members m 
+       LEFT JOIN membership_plans p ON m.plan_id = p.id 
+       WHERE m.id = ? OR m.member_code = ? OR m.phone = ?`,
+      [memberIdentifier, memberIdentifier, memberIdentifier]
+    );
+  }
 
   if (!member) {
     return {
@@ -36,10 +52,10 @@ export async function verifyQrToken(tokenString) {
     };
   }
 
-  return processMemberCheckin(db, member, 'qr_scan', null, null);
+  return processMemberCheckin(db, member, 'qr_scan', null, null, null, targetGymId);
 }
 
-export async function verifyManualCheckin({ query, officerPin, staffId }) {
+export async function verifyManualCheckin({ query, officerPin, staffId, gymId = null }) {
   const db = await getDb();
 
   // 1. Verify Officer PIN
@@ -72,11 +88,17 @@ export async function verifyManualCheckin({ query, officerPin, staffId }) {
     SELECT m.*, p.name as plan_title 
     FROM members m 
     LEFT JOIN membership_plans p ON m.plan_id = p.id
+    WHERE 1=1
   `;
   const params = [];
 
+  if (gymId && gymId !== 'all') {
+    membersQuery += ` AND m.gym_id = ?`;
+    params.push(gymId);
+  }
+
   if (cleanQuery) {
-    membersQuery += ` WHERE m.member_code LIKE ? OR m.name LIKE ? OR m.phone LIKE ?`;
+    membersQuery += ` AND (m.member_code LIKE ? OR m.name LIKE ? OR m.phone LIKE ?)`;
     params.push(`%${cleanQuery}%`, `%${cleanQuery}%`, `%${cleanQuery}%`);
   }
 
@@ -90,7 +112,7 @@ export async function verifyManualCheckin({ query, officerPin, staffId }) {
   };
 }
 
-export async function confirmManualCheckin({ memberId, officerId, officerName, notes }) {
+export async function confirmManualCheckin({ memberId, officerId, officerName, notes, gymId = null }) {
   const db = await getDb();
   const member = await db.get(
     `SELECT m.*, p.name as plan_title 
@@ -111,10 +133,11 @@ export async function confirmManualCheckin({ memberId, officerId, officerName, n
     };
   }
 
-  return processMemberCheckin(db, member, 'manual', officerId, officerName, notes);
+  return processMemberCheckin(db, member, 'manual', officerId, officerName, notes, gymId);
 }
 
-async function processMemberCheckin(db, member, checkinType, officerId = null, officerName = null, notes = null) {
+async function processMemberCheckin(db, member, checkinType, officerId = null, officerName = null, notes = null, targetGymId = null) {
+  const gymId = targetGymId || member.gym_id || 'gym-gudiyatham';
   const now = new Date();
   const todayStr = now.toISOString().split('T')[0];
   const expiryDate = new Date(member.expiry_date);
@@ -132,9 +155,9 @@ async function processMemberCheckin(db, member, checkinType, officerId = null, o
   if (member.is_frozen === 1 || member.status === 'frozen') {
     const checkinId = uuidv4();
     await db.run(
-      `INSERT INTO checkins (id, member_id, member_code, member_name, photo_url, checkin_type, manual_checkin_by, manual_officer_name, points_awarded, verification_status, denial_reason, checkin_time)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))`,
-      [checkinId, member.id, member.member_code, member.name, member.photo_url, checkinType, officerId, officerName, 0, 'denied', 'Account Frozen']
+      `INSERT INTO checkins (id, member_id, member_code, member_name, photo_url, checkin_type, manual_checkin_by, manual_officer_name, points_awarded, verification_status, denial_reason, checkin_time, gym_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'), ?)`,
+      [checkinId, member.id, member.member_code, member.name, member.photo_url, checkinType, officerId, officerName, 0, 'denied', 'Account Frozen', gymId]
     );
 
     return {
@@ -153,7 +176,8 @@ async function processMemberCheckin(db, member, checkinType, officerId = null, o
         status: 'frozen',
         daysRemaining: 0,
         loyalty_points: member.loyalty_points,
-        phone: member.phone
+        phone: member.phone,
+        gym_id: gymId
       }
     };
   }
@@ -173,9 +197,9 @@ async function processMemberCheckin(db, member, checkinType, officerId = null, o
 
       const checkinId = uuidv4();
       await db.run(
-        `INSERT INTO checkins (id, member_id, member_code, member_name, photo_url, checkin_type, manual_checkin_by, manual_officer_name, points_awarded, verification_status, denial_reason, checkin_time)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))`,
-        [checkinId, member.id, member.member_code, member.name, member.photo_url, checkinType, officerId, officerName, 0, 'grace_entry', `Grace Entry (${daysOverdue} day overdue)`]
+        `INSERT INTO checkins (id, member_id, member_code, member_name, photo_url, checkin_type, manual_checkin_by, manual_officer_name, points_awarded, verification_status, denial_reason, checkin_time, gym_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'), ?)`,
+        [checkinId, member.id, member.member_code, member.name, member.photo_url, checkinType, officerId, officerName, 0, 'grace_entry', `Grace Entry (${daysOverdue} day overdue)`, gymId]
       );
 
       return {
@@ -195,16 +219,17 @@ async function processMemberCheckin(db, member, checkinType, officerId = null, o
           status: 'grace',
           daysRemaining: -daysOverdue,
           loyalty_points: member.loyalty_points,
-          phone: member.phone
+          phone: member.phone,
+          gym_id: gymId
         }
       };
     } else {
       // Blocked / Red Screen
       const checkinId = uuidv4();
       await db.run(
-        `INSERT INTO checkins (id, member_id, member_code, member_name, photo_url, checkin_type, manual_checkin_by, manual_officer_name, points_awarded, verification_status, denial_reason, checkin_time)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))`,
-        [checkinId, member.id, member.member_code, member.name, member.photo_url, checkinType, officerId, officerName, 0, 'denied', `Membership Expired (${daysOverdue} days ago)`]
+        `INSERT INTO checkins (id, member_id, member_code, member_name, photo_url, checkin_type, manual_checkin_by, manual_officer_name, points_awarded, verification_status, denial_reason, checkin_time, gym_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'), ?)`,
+        [checkinId, member.id, member.member_code, member.name, member.photo_url, checkinType, officerId, officerName, 0, 'denied', `Membership Expired (${daysOverdue} days ago)`, gymId]
       );
 
       return {
@@ -224,7 +249,8 @@ async function processMemberCheckin(db, member, checkinType, officerId = null, o
           status: 'expired',
           daysRemaining: -daysOverdue,
           loyalty_points: member.loyalty_points,
-          phone: member.phone
+          phone: member.phone,
+          gym_id: gymId
         }
       };
     }
@@ -241,9 +267,9 @@ async function processMemberCheckin(db, member, checkinType, officerId = null, o
     // Re-entry permitted (0 points credited, Blue Screen)
     const checkinId = uuidv4();
     await db.run(
-      `INSERT INTO checkins (id, member_id, member_code, member_name, photo_url, checkin_type, manual_checkin_by, manual_officer_name, points_awarded, verification_status, checkin_time)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))`,
-      [checkinId, member.id, member.member_code, member.name, member.photo_url, checkinType, officerId, officerName, 0, 're_entry']
+      `INSERT INTO checkins (id, member_id, member_code, member_name, photo_url, checkin_type, manual_checkin_by, manual_officer_name, points_awarded, verification_status, checkin_time, gym_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'), ?)`,
+      [checkinId, member.id, member.member_code, member.name, member.photo_url, checkinType, officerId, officerName, 0, 're_entry', gymId]
     );
 
     return {
@@ -263,7 +289,8 @@ async function processMemberCheckin(db, member, checkinType, officerId = null, o
         status: 'active',
         daysRemaining,
         loyalty_points: member.loyalty_points,
-        phone: member.phone
+        phone: member.phone,
+        gym_id: gymId
       }
     };
   }
@@ -274,9 +301,9 @@ async function processMemberCheckin(db, member, checkinType, officerId = null, o
 
   const checkinId = uuidv4();
   await db.run(
-    `INSERT INTO checkins (id, member_id, member_code, member_name, photo_url, checkin_type, manual_checkin_by, manual_officer_name, points_awarded, verification_status, checkin_time)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))`,
-    [checkinId, member.id, member.member_code, member.name, member.photo_url, checkinType, officerId, officerName, dailyPoints, 'granted']
+    `INSERT INTO checkins (id, member_id, member_code, member_name, photo_url, checkin_type, manual_checkin_by, manual_officer_name, points_awarded, verification_status, checkin_time, gym_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'), ?)`,
+    [checkinId, member.id, member.member_code, member.name, member.photo_url, checkinType, officerId, officerName, dailyPoints, 'granted', gymId]
   );
 
   return {
@@ -296,20 +323,25 @@ async function processMemberCheckin(db, member, checkinType, officerId = null, o
       status: 'active',
       daysRemaining,
       loyalty_points: newPoints,
-      phone: member.phone
+      phone: member.phone,
+      gym_id: gymId
     }
   };
 }
 
-export async function getFloorRushMeter() {
+export async function getFloorRushMeter(gymId) {
   const db = await getDb();
+  const filterGym = gymId && gymId !== 'all';
+  const gymClause = filterGym ? ' AND gym_id = ?' : '';
+  const gymParams = filterGym ? [gymId] : [];
 
   // Count checkins in the last 90 minutes
   const row = await db.get(
     `SELECT COUNT(*) as active_now 
      FROM checkins 
      WHERE checkin_time >= datetime('now', '-90 minutes', 'localtime') 
-       AND verification_status IN ('granted', 're_entry', 'grace_entry')`
+       AND verification_status IN ('granted', 're_entry', 'grace_entry')${gymClause}`,
+    gymParams
   );
 
   const count = row ? row.active_now : 0;
@@ -335,13 +367,13 @@ export async function getFloorRushMeter() {
   };
 }
 
-export async function getRecentCheckins(limit = 15) {
+export async function getRecentCheckins(limit = 15, gymId) {
   const db = await getDb();
-  return await db.all(
-    `SELECT * FROM checkins 
-     ORDER BY checkin_time DESC 
-     LIMIT ?`,
-    [limit]
-  );
+  const filterGym = gymId && gymId !== 'all';
+  const query = filterGym
+    ? `SELECT * FROM checkins WHERE gym_id = ? ORDER BY checkin_time DESC LIMIT ?`
+    : `SELECT * FROM checkins ORDER BY checkin_time DESC LIMIT ?`;
+  const params = filterGym ? [gymId, limit] : [limit];
+  return await db.all(query, params);
 }
 

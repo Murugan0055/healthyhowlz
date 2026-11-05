@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { api } from '../services/api';
 
-export default function PosRetailPage({ onViewInvoice }) {
+export default function PosRetailPage({ currentGymId, currentGym, onViewInvoice }) {
   const [activeTab, setActiveTab] = useState('pos'); // 'pos' or 'lockers'
   
   // POS State
@@ -61,7 +61,7 @@ export default function PosRetailPage({ onViewInvoice }) {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [currentGymId]);
 
   // Cart actions
   const addToCart = (product) => {
