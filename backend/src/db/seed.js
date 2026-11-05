@@ -6,6 +6,7 @@ export async function seedDatabase() {
   const db = await getDb();
 
   console.log('🌱 Checking & syncing Elite Gym Operating Platform Database...');
+  await db.run('PRAGMA foreign_keys = OFF;');
 
   const hashedPw = await bcrypt.hash('admin123', 10);
 
@@ -348,7 +349,151 @@ export async function seedDatabase() {
     }
   }
 
-  // 3b. Branch Members & Check-ins for Vellore East & Chennai Anna Nagar
+  // 3b. Members & Check-ins for All Facilities (Gudiyatham HQ, Vellore East & Chennai Anna Nagar)
+  const gudiyathamMembers = [
+    {
+      id: 'mem-1001',
+      member_code: 'EG-1001',
+      name: 'Vigneshwaran K',
+      phone: '9876543210',
+      email: 'vignesh.k@gmail.com',
+      plan_id: 'plan-12m',
+      plan_name: '12 Month Elite Annual',
+      start_date: '2026-09-19',
+      expiry_date: '2027-04-17',
+      status: 'active',
+      loyalty_points: 20,
+      gym_id: 'gym-gudiyatham',
+      assigned_trainer_id: 'staff-trainer-1',
+      pt_sessions_total: 10,
+      pt_sessions_remaining: 8
+    },
+    {
+      id: 'mem-1002',
+      member_code: 'EG-1002',
+      name: 'Aravind Swamy',
+      phone: '9876543211',
+      email: 'aravind.s@outlook.com',
+      plan_id: 'plan-6m',
+      plan_name: '6 Month Transformation',
+      start_date: '2026-08-10',
+      expiry_date: '2027-08-10',
+      status: 'active',
+      loyalty_points: 840,
+      gym_id: 'gym-gudiyatham',
+      assigned_trainer_id: 'staff-trainer-2',
+      pt_sessions_total: 0,
+      pt_sessions_remaining: 0
+    },
+    {
+      id: 'mem-1003',
+      member_code: 'EG-1003',
+      name: 'Kavitha Ramesh',
+      phone: '9876543212',
+      email: 'kavitha.ramesh@gmail.com',
+      plan_id: 'plan-6m',
+      plan_name: '6 Month Transformation',
+      start_date: '2026-08-25',
+      expiry_date: '2027-02-21',
+      status: 'active',
+      loyalty_points: 680,
+      gym_id: 'gym-gudiyatham',
+      assigned_trainer_id: 'staff-trainer-1'
+    },
+    {
+      id: 'mem-1004',
+      member_code: 'EG-1004',
+      name: 'Surya Prakash',
+      phone: '9876543213',
+      email: 'surya.prakash@yahoo.com',
+      plan_id: 'plan-3m',
+      plan_name: '3 Month Classic Fitness',
+      start_date: '2026-10-12',
+      expiry_date: '2026-12-11',
+      status: 'active',
+      loyalty_points: 0,
+      gym_id: 'gym-gudiyatham',
+      assigned_trainer_id: 'staff-trainer-2'
+    },
+    {
+      id: 'mem-1005',
+      member_code: 'EG-1005',
+      name: 'Mohan Babu',
+      phone: '9876543214',
+      email: 'mohan.babu@gmail.com',
+      plan_id: 'plan-1m',
+      plan_name: '1 Month Starter',
+      start_date: '2026-08-08',
+      expiry_date: '2026-11-06',
+      status: 'active',
+      loyalty_points: 300,
+      gym_id: 'gym-gudiyatham',
+      assigned_trainer_id: 'staff-trainer-1'
+    },
+    {
+      id: 'mem-1006',
+      member_code: 'EG-1006',
+      name: 'Divya Bharathi',
+      phone: '9876543215',
+      email: 'divya.b@gmail.com',
+      plan_id: 'plan-6m',
+      plan_name: '6 Month Transformation',
+      start_date: '2026-05-14',
+      expiry_date: '2026-11-10',
+      status: 'active',
+      loyalty_points: 640,
+      gym_id: 'gym-gudiyatham',
+      assigned_trainer_id: 'staff-trainer-2'
+    },
+    {
+      id: 'mem-1007',
+      member_code: 'EG-1007',
+      name: 'Saravanan R (Grace Period)',
+      phone: '9876543216',
+      email: 'saravanan.r@gmail.com',
+      plan_id: 'plan-3m',
+      plan_name: '3 Month Pro Momentum',
+      start_date: '2026-08-04',
+      expiry_date: '2026-11-02',
+      status: 'grace',
+      loyalty_points: 180,
+      gym_id: 'gym-gudiyatham',
+      assigned_trainer_id: 'staff-trainer-1'
+    },
+    {
+      id: 'mem-1008',
+      member_code: 'EG-1008',
+      name: 'Praveen Kumar (Blocked)',
+      phone: '9876543217',
+      email: 'praveen.k@gmail.com',
+      plan_id: 'plan-1m',
+      plan_name: '1 Month Starter',
+      start_date: '2026-09-19',
+      expiry_date: '2026-10-19',
+      status: 'expired',
+      loyalty_points: 80,
+      gym_id: 'gym-gudiyatham',
+      assigned_trainer_id: 'staff-trainer-2'
+    },
+    {
+      id: 'mem-1009',
+      member_code: 'EG-1009',
+      name: 'Deepak Raj (Frozen Plan)',
+      phone: '9876543218',
+      email: 'deepak.raj@gmail.com',
+      plan_id: 'plan-6m',
+      plan_name: '6 Month Transformation',
+      start_date: '2026-09-04',
+      expiry_date: '2027-03-03',
+      status: 'frozen',
+      is_frozen: 1,
+      freeze_start_date: '2026-10-15',
+      loyalty_points: 210,
+      gym_id: 'gym-gudiyatham',
+      assigned_trainer_id: 'staff-trainer-1'
+    }
+  ];
+
   const branchMembers = [
     {
       id: 'mem-vel-101',
@@ -577,7 +722,7 @@ export async function seedDatabase() {
     }
   ];
 
-  for (const bm of branchMembers) {
+  for (const bm of [...gudiyathamMembers, ...branchMembers]) {
     const existing = await db.get('SELECT id FROM members WHERE id = ?', [bm.id]);
     if (!existing) {
       await db.run(
@@ -1134,6 +1279,8 @@ export async function seedDatabase() {
     }
   }
 
+  await db.run('PRAGMA foreign_keys = ON;');
+
   console.log('✅ Staff, Roles, Plans & Settings synced successfully!');
   console.log('✅ App 2 Workouts, Diet, Notices & Device Bindings seeded successfully!');
   console.log('✅ Gym Owner Operating Expenses & Net P&L engine seeded successfully!');
@@ -1142,7 +1289,7 @@ export async function seedDatabase() {
 
 if (process.argv[1] && process.argv[1].endsWith('seed.js')) {
   seedDatabase().catch((err) => {
-    console.error('Seed error:', err);
+    console.error('Seed error:', err.stack || err);
     process.exit(1);
   });
 }
