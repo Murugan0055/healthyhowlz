@@ -1,0 +1,16 @@
+{
+  "name": "elite-gym-operating-platform",
+  "version": "1.0.0",
+  "description": "Elite Gym Operating Platform - Gudiyatham (App 1: Admin & Owner Portal)",
+  "scripts": {
+    "start": "node backend/src/server.js",
+    "seed": "node backend/src/db/seed.js",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build:frontend": "cd frontend && npm run build"
+  },
+  "keywords": ["gym-management", "gudiyatham", "pos", "qr-attendance", "crm"],
+  "author": "Elite Fitness Center",
+  "license": "ISC"
+}
+
