@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: healthyhowlz-fitness-os
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: cd backend && npm install && cd ../frontend && npm install && npm run build
+    startCommand: node backend/src/server.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: JWT_SECRET
+        generateValue: true
+      - key: OFFICER_MASTER_PIN
+        value: "1234"

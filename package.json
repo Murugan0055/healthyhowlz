@@ -4,12 +4,16 @@
   "description": "HealthyHowlz Multi-Tenant Fitness OS (Platform Admin, Gym OS, Floor Coach, Member PWA)",
   "scripts": {
     "start": "node backend/src/server.js",
+    "build": "cd backend && npm install && cd ../frontend && npm install && npm run build",
     "seed": "node backend/src/db/seed.js",
-    "build": "npm run build --prefix frontend",
-    "dev:backend": "npm run dev --prefix backend",
-    "dev:frontend": "npm run dev --prefix frontend",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
     "build:frontend": "npm run build --prefix frontend",
     "deploy": "bash scripts/deploy.sh"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
   },
   "keywords": ["healthyhowlz", "gym-management", "multi-tenant", "pos", "qr-attendance", "crm", "pwa"],
   "author": "HealthyHowlz Fitness OS",
