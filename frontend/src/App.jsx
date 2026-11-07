@@ -32,6 +32,8 @@ import TrainerApp from './trainer/TrainerApp';
 
 import { TenantProvider, useTenant } from './context/TenantContext';
 import PlatformAdminApp from './platform/PlatformAdminApp';
+import SupportModeBanner from './components/SupportModeBanner';
+import GlobalBroadcastBanner from './components/GlobalBroadcastBanner';
 
 import { api } from './services/api';
 
@@ -79,6 +81,11 @@ function MainAppLayout({ onLogout, onSwitchToPlatform }) {
 
   return (
     <div className="min-h-screen bg-[#0b0f17] text-slate-100 flex flex-col selection:bg-emerald-500 selection:text-white">
+      {/* 1. HealthyHowlz Support Mode Impersonation Banner */}
+      <SupportModeBanner />
+
+      {/* 2. Global Incident & Platform Advisory Broadcast */}
+      <GlobalBroadcastBanner />
       
       {/* Top Main Navigation Bar */}
       <Navbar

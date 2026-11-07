@@ -659,6 +659,71 @@ export const api = {
       body: JSON.stringify(payload)
     });
     return await res.json();
+  },
+
+  // --- Phase 1: Support Impersonation, Credential Reset & Broadcasts ---
+  impersonateGym: async (gymId) => {
+    const res = await fetch(`${BASE_URL}/platform/impersonate/${gymId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to start support session');
+    return data;
+  },
+
+  exitImpersonation: async () => {
+    const res = await fetch(`${BASE_URL}/platform/impersonate-exit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    return await res.json();
+  },
+
+  getGymStaff: async (gymId) => {
+    const res = await fetch(`${BASE_URL}/platform/gyms/${gymId}/staff`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to fetch gym staff');
+    return data;
+  },
+
+  resetStaffCredentials: async (gymId, payload) => {
+    const res = await fetch(`${BASE_URL}/platform/gyms/${gymId}/reset-credentials`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to reset credentials');
+    return data;
+  },
+
+  getActiveBroadcasts: async () => {
+    const res = await fetch(`${BASE_URL}/platform/broadcasts/active`);
+    return await res.json();
+  },
+
+  createBroadcast: async (payload) => {
+    const res = await fetch(`${BASE_URL}/platform/broadcasts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to publish broadcast');
+    return data;
+  },
+
+  dismissBroadcast: async (id) => {
+    const res = await fetch(`${BASE_URL}/platform/broadcasts/${id}`, {
+      method: 'DELETE'
+    });
+    return await res.json();
+  },
+
+  getAuditLogs: async () => {
+    const res = await fetch(`${BASE_URL}/platform/audit-logs`);
+    return await res.json();
   }
 };
 

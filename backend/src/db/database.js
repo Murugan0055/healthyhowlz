@@ -398,6 +398,31 @@ async function initSchema(db) {
       meals_json TEXT NOT NULL,
       is_active INTEGER DEFAULT 1
     );
+
+    -- Platform Admin Audit Logs (Impersonation, Credential Reset, Status Change, Broadcasts)
+    CREATE TABLE IF NOT EXISTS platform_audit_logs (
+      id TEXT PRIMARY KEY,
+      admin_id TEXT NOT NULL,
+      action TEXT NOT NULL,
+      target_gym_id TEXT,
+      target_user_id TEXT,
+      details_json TEXT,
+      ip_address TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Global Platform Broadcasts (HQ Announcements to all gyms)
+    CREATE TABLE IF NOT EXISTS platform_broadcasts (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      message TEXT NOT NULL,
+      severity TEXT NOT NULL DEFAULT 'info', -- 'info', 'warning', 'critical'
+      is_active INTEGER NOT NULL DEFAULT 1,
+      target_audience TEXT NOT NULL DEFAULT 'all', -- 'all', 'owners', 'trainers'
+      created_by TEXT NOT NULL DEFAULT 'healthyhowlz_admin',
+      expires_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
   `);
 
   // Ensure newer columns exist on existing tables

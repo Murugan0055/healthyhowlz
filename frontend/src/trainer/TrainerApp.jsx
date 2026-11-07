@@ -5,6 +5,7 @@ import PtPunchInTab from './tabs/PtPunchInTab';
 import EarningsDashboardTab from './tabs/EarningsDashboardTab';
 import WorkoutDietBuilderTab from './tabs/WorkoutDietBuilderTab';
 import PwaInstallButton from '../components/PwaInstallButton';
+import GlobalBroadcastBanner from '../components/GlobalBroadcastBanner';
 import { Building2, LogOut } from 'lucide-react';
 
 export default function TrainerApp({ onLogout }) {
@@ -31,6 +32,8 @@ export default function TrainerApp({ onLogout }) {
 
   return (
     <div className="min-h-screen bg-[#070b12] text-slate-100 flex flex-col selection:bg-emerald-500 selection:text-white pb-28 sm:pb-12">
+      {/* Global Incident / Platform Advisory Broadcast */}
+      <GlobalBroadcastBanner />
       
       {/* Top Header */}
       <header className="sticky top-0 z-40 bg-[#0c121e]/90 backdrop-blur-md border-b border-slate-800">

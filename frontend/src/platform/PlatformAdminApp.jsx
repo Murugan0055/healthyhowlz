@@ -3,7 +3,7 @@ import {
   Building2, Plus, Search, ShieldCheck, TrendingUp, Users, CheckCircle,
   AlertTriangle, RefreshCw, ExternalLink, Sliders, Smartphone, Check,
   X, DollarSign, Activity, MapPin, Phone, Mail, Award, Lock, ArrowUpRight, LogOut,
-  Edit3, Trash2, Archive, Globe, Sparkles
+  Edit3, Trash2, Archive, Globe, Sparkles, Headphones, KeyRound, Megaphone, History, Radio, ShieldAlert
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useTenant } from '../context/TenantContext';
@@ -57,6 +57,33 @@ export default function PlatformAdminApp({ onLogout, onLaunchGym }) {
     kiosk_pin: '1234',
     status: 'active'
   });
+
+  // Phase 1: Staff Credentials Management state
+  const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
+  const [staffModalLoading, setStaffModalLoading] = useState(false);
+  const [selectedGymForStaff, setSelectedGymForStaff] = useState(null);
+  const [gymStaffList, setGymStaffList] = useState([]);
+  const [selectedStaffId, setSelectedStaffId] = useState('');
+  const [newPinInput, setNewPinInput] = useState('');
+  const [newPasswordInput, setNewPasswordInput] = useState('');
+  const [resettingCredentials, setResettingCredentials] = useState(false);
+
+  // Phase 1: Global Broadcasts state
+  const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false);
+  const [activeBroadcasts, setActiveBroadcasts] = useState([]);
+  const [broadcastLoading, setBroadcastLoading] = useState(false);
+  const [broadcastForm, setBroadcastForm] = useState({
+    title: '',
+    message: '',
+    severity: 'info',
+    target_audience: 'all',
+    expires_hours: 24
+  });
+
+  // Phase 1: Audit Log state
+  const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [auditLoading, setAuditLoading] = useState(false);
 
   const [notification, setNotification] = useState(null);
 
@@ -203,6 +230,131 @@ export default function PlatformAdminApp({ onLogout, onLaunchGym }) {
     }
   };
 
+  // Phase 1: Support Mode Impersonation ("Login as Tenant")
+  const handleSupportImpersonate = async (gym) => {
+    try {
+      const res = await api.impersonateGym(gym.id);
+      
+      // Preserve current Super Admin session in sessionStorage
+      sessionStorage.setItem('healthyhowlz_support_mode', 'true');
+      sessionStorage.setItem('healthyhowlz_support_original_token', localStorage.getItem('elite_gym_auth_token') || '');
+      sessionStorage.setItem('healthyhowlz_support_original_user', localStorage.getItem('elite_gym_user') || '');
+      sessionStorage.setItem('healthyhowlz_support_gym_name', gym.name);
+      sessionStorage.setItem('healthyhowlz_support_owner_name', gym.owner_name);
+
+      // Switch active auth session to the impersonated tenant
+      localStorage.setItem('elite_gym_auth_token', res.supportToken);
+      localStorage.setItem('elite_gym_user', JSON.stringify(res.user));
+
+      // Direct browser to the tenant's dedicated facility route
+      const gymPath = `/${gym.slug || gym.id}`;
+      window.location.href = gymPath;
+    } catch (err) {
+      showNotification('Failed to start support session: ' + err.message, 'error');
+    }
+  };
+
+  // Phase 1: Open Emergency Staff Credentials Modal
+  const handleOpenStaffModal = async (gym) => {
+    try {
+      setSelectedGymForStaff(gym);
+      setIsStaffModalOpen(true);
+      setStaffModalLoading(true);
+      const staff = await api.getGymStaff(gym.id);
+      setGymStaffList(staff || []);
+      if (staff && staff.length > 0) {
+        setSelectedStaffId(staff[0].id);
+      }
+    } catch (err) {
+      showNotification('Failed to load staff list: ' + err.message, 'error');
+    } finally {
+      setStaffModalLoading(false);
+    }
+  };
+
+  // Phase 1: Reset Staff PIN / Password
+  const handleResetStaffCredential = async (e) => {
+    e.preventDefault();
+    if (!selectedStaffId) return;
+    if (!newPinInput && !newPasswordInput) {
+      alert('Please enter either a new Security PIN or Password.');
+      return;
+    }
+
+    try {
+      setResettingCredentials(true);
+      await api.resetStaffCredentials(selectedGymForStaff.id, {
+        staffId: selectedStaffId,
+        newPin: newPinInput || undefined,
+        newPassword: newPasswordInput || undefined
+      });
+      showNotification('Credentials updated successfully!');
+      setNewPinInput('');
+      setNewPasswordInput('');
+      // Reload staff
+      const staff = await api.getGymStaff(selectedGymForStaff.id);
+      setGymStaffList(staff || []);
+    } catch (err) {
+      alert('Error updating credentials: ' + err.message);
+    } finally {
+      setResettingCredentials(false);
+    }
+  };
+
+  // Phase 1: Open Global Incident Broadcast Modal
+  const handleOpenBroadcastModal = async () => {
+    try {
+      setIsBroadcastModalOpen(true);
+      setBroadcastLoading(true);
+      const active = await api.getActiveBroadcasts();
+      setActiveBroadcasts(active || []);
+    } catch (err) {
+      showNotification('Failed to load broadcasts: ' + err.message, 'error');
+    } finally {
+      setBroadcastLoading(false);
+    }
+  };
+
+  // Phase 1: Publish Global Incident Broadcast
+  const handlePublishBroadcast = async (e) => {
+    e.preventDefault();
+    try {
+      await api.createBroadcast(broadcastForm);
+      showNotification('Global broadcast published to all gym dashboards!');
+      setBroadcastForm({ title: '', message: '', severity: 'info', target_audience: 'all', expires_hours: 24 });
+      const active = await api.getActiveBroadcasts();
+      setActiveBroadcasts(active || []);
+    } catch (err) {
+      alert('Failed to publish broadcast: ' + err.message);
+    }
+  };
+
+  // Phase 1: Dismiss Broadcast from HQ
+  const handleDismissBroadcast = async (id) => {
+    try {
+      await api.dismissBroadcast(id);
+      showNotification('Broadcast deactivated.');
+      const active = await api.getActiveBroadcasts();
+      setActiveBroadcasts(active || []);
+    } catch (err) {
+      showNotification(err.message, 'error');
+    }
+  };
+
+  // Phase 1: Open Audit Logs Modal
+  const handleOpenAuditLogs = async () => {
+    try {
+      setIsAuditModalOpen(true);
+      setAuditLoading(true);
+      const logs = await api.getAuditLogs();
+      setAuditLogs(logs || []);
+    } catch (err) {
+      showNotification('Failed to load audit logs: ' + err.message, 'error');
+    } finally {
+      setAuditLoading(false);
+    }
+  };
+
   // Filter gyms
   const filteredGyms = gyms.filter((g) => {
     const matchesSearch =
@@ -249,8 +401,26 @@ export default function PlatformAdminApp({ onLogout, onLaunchGym }) {
             </div>
           </div>
 
-          {/* Action Tools (Cleaned - No Cross-App Bypass Links) */}
+          {/* Action Tools */}
           <div className="flex items-center gap-2 sm:gap-3">
+            <button
+              onClick={handleOpenBroadcastModal}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 text-purple-300 border border-purple-500/40 text-xs font-bold transition-all active:scale-95"
+              title="Global Incident Broadcasts & Announcements"
+            >
+              <Megaphone className="w-3.5 h-3.5 text-purple-400" />
+              <span className="hidden sm:inline">Broadcasts</span>
+            </button>
+
+            <button
+              onClick={handleOpenAuditLogs}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 text-xs font-bold transition-all active:scale-95"
+              title="Platform Audit Trail (Troubleshooting History)"
+            >
+              <History className="w-3.5 h-3.5 text-slate-400" />
+              <span className="hidden sm:inline">Audit Trail</span>
+            </button>
+
             <PwaInstallButton compact={false} variant="navbar" />
 
             <button
@@ -521,9 +691,23 @@ export default function PlatformAdminApp({ onLogout, onLaunchGym }) {
                           </span>
                         </td>
 
-                        {/* Actions: Edit, Launch OS, Soft-Delete */}
+                        {/* Actions: Support Mode, Staff PINs, Edit, Soft-Delete, Launch OS */}
                         <td className="py-4 px-4 text-right">
                           <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => handleSupportImpersonate(gym)}
+                              className="p-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 transition-colors"
+                              title="Enter Support Impersonation Mode (View as Owner)"
+                            >
+                              <Headphones className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleOpenStaffModal(gym)}
+                              className="p-1.5 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 transition-colors"
+                              title="Emergency Staff Credentials & PINs"
+                            >
+                              <KeyRound className="w-3.5 h-3.5" />
+                            </button>
                             <button
                               onClick={() => handleOpenEdit(gym)}
                               className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-colors"
@@ -639,13 +823,27 @@ export default function PlatformAdminApp({ onLogout, onLaunchGym }) {
                     </div>
                   </div>
 
-                  {/* Card Footer: Clean Action Buttons (NO status dropdown - status updated in Edit popup) */}
-                  <div className="flex items-center justify-between gap-2 pt-1">
-                    <div className="flex items-center gap-1.5">
+                  {/* Card Footer: Clean Action Buttons with Support Mode & Staff PINs */}
+                  <div className="flex items-center justify-between gap-1.5 pt-1.5 border-t border-slate-800/80">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <button
+                        onClick={() => handleSupportImpersonate(gym)}
+                        className="p-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 transition-colors"
+                        title="Enter Support Impersonation Mode"
+                      >
+                        <Headphones className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleOpenStaffModal(gym)}
+                        className="p-1.5 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 transition-colors"
+                        title="Emergency Staff Credentials & PINs"
+                      >
+                        <KeyRound className="w-3.5 h-3.5" />
+                      </button>
                       <button
                         onClick={() => handleOpenEdit(gym)}
-                        className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 flex items-center gap-1.5 transition-colors"
-                        title="Edit Facility & Update Status"
+                        className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 flex items-center gap-1 transition-colors"
+                        title="Edit Facility"
                       >
                         <Edit3 className="w-3.5 h-3.5 text-slate-400" />
                         <span>Edit</span>
@@ -661,7 +859,7 @@ export default function PlatformAdminApp({ onLogout, onLaunchGym }) {
 
                     <button
                       onClick={() => handleLaunchGym(gym)}
-                      className="px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center gap-1 transition-all shadow-sm shadow-emerald-500/20"
+                      className="px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center gap-1 transition-all shadow-sm shadow-emerald-500/20 shrink-0"
                       title={`Launch into ${gym.name}`}
                     >
                       <span>Launch OS</span>
@@ -1092,6 +1290,347 @@ export default function PlatformAdminApp({ onLogout, onLaunchGym }) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* PHASE 1 MODAL 1: EMERGENCY STAFF CREDENTIALS & PIN MANAGEMENT */}
+      {isStaffModalOpen && selectedGymForStaff && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto animate-in fade-in">
+          <div className="bg-[#0f172a] border border-slate-700 rounded-3xl max-w-xl w-full p-6 text-slate-100 shadow-2xl relative my-8">
+            <button
+              onClick={() => setIsStaffModalOpen(false)}
+              className="absolute top-5 right-5 p-1.5 rounded-full bg-slate-800 text-slate-400 hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 rounded-2xl bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0">
+                <KeyRound className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-base text-white">Emergency Access & Staff Credentials</h3>
+                <p className="text-xs text-slate-400">{selectedGymForStaff.name} — Reset locked PINs or passwords</p>
+              </div>
+            </div>
+
+            {staffModalLoading ? (
+              <div className="py-12 flex flex-col items-center justify-center gap-2 text-slate-400 text-xs">
+                <RefreshCw className="w-5 h-5 animate-spin text-blue-400" />
+                <span>Loading facility staff roster...</span>
+              </div>
+            ) : (
+              <div className="space-y-5 text-xs">
+                {/* Staff Roster Table */}
+                <div className="rounded-2xl border border-slate-800 overflow-hidden bg-slate-900/60 max-h-48 overflow-y-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="bg-slate-950/80 border-b border-slate-800 text-slate-400 text-[10px] uppercase font-semibold">
+                        <th className="py-2.5 px-3">Name & Role</th>
+                        <th className="py-2.5 px-3">Phone</th>
+                        <th className="py-2.5 px-3">Current PIN</th>
+                        <th className="py-2.5 px-3 text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/60">
+                      {gymStaffList.map((st) => (
+                        <tr
+                          key={st.id}
+                          className={`hover:bg-slate-800/40 transition-colors ${selectedStaffId === st.id ? 'bg-blue-500/10' : ''}`}
+                        >
+                          <td className="py-2.5 px-3">
+                            <span className="font-bold text-white block">{st.name}</span>
+                            <span className="text-[10px] uppercase font-bold text-blue-400">{st.role}</span>
+                          </td>
+                          <td className="py-2.5 px-3 text-slate-300 font-mono text-[11px]">{st.phone}</td>
+                          <td className="py-2.5 px-3 font-mono text-emerald-400 font-bold">{st.security_pin || '1234'}</td>
+                          <td className="py-2.5 px-3 text-right">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedStaffId(st.id)}
+                              className={`px-2 py-1 rounded-lg text-[10px] font-bold ${
+                                selectedStaffId === st.id
+                                  ? 'bg-blue-500 text-slate-950'
+                                  : 'bg-slate-800 text-slate-300 hover:text-white'
+                              }`}
+                            >
+                              {selectedStaffId === st.id ? 'Selected' : 'Select'}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Reset Form */}
+                <form onSubmit={handleResetStaffCredential} className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-white text-xs">
+                      Reset Credentials for Selected User:{' '}
+                      <span className="text-blue-400 underline">
+                        {gymStaffList.find(s => s.id === selectedStaffId)?.name || 'Select a user'}
+                      </span>
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-slate-400 font-semibold mb-1">New 4-Digit Security PIN</label>
+                      <input
+                        type="text"
+                        maxLength={6}
+                        placeholder="e.g. 5678"
+                        value={newPinInput}
+                        onChange={(e) => setNewPinInput(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white font-mono focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-slate-400 font-semibold mb-1">New Password (Optional)</label>
+                      <input
+                        type="password"
+                        placeholder="New account password"
+                        value={newPasswordInput}
+                        onChange={(e) => setNewPasswordInput(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2 pt-2">
+                    <button
+                      type="submit"
+                      disabled={resettingCredentials || !selectedStaffId}
+                      className="px-4 py-2 rounded-xl bg-blue-500 hover:bg-blue-400 text-slate-950 font-bold flex items-center gap-1.5 transition-transform active:scale-95 disabled:opacity-50"
+                    >
+                      {resettingCredentials ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                      <span>Apply Emergency Reset</span>
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* PHASE 1 MODAL 2: GLOBAL INCIDENT BROADCAST COMPOSER & MANAGER */}
+      {isBroadcastModalOpen && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto animate-in fade-in">
+          <div className="bg-[#0f172a] border border-slate-700 rounded-3xl max-w-xl w-full p-6 text-slate-100 shadow-2xl relative my-8">
+            <button
+              onClick={() => setIsBroadcastModalOpen(false)}
+              className="absolute top-5 right-5 p-1.5 rounded-full bg-slate-800 text-slate-400 hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 rounded-2xl bg-purple-500/20 text-purple-400 flex items-center justify-center shrink-0">
+                <Megaphone className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-base text-white">Global Incident Broadcast Manager</h3>
+                <p className="text-xs text-slate-400">Publish high-priority operational notices to all gym dashboards</p>
+              </div>
+            </div>
+
+            {/* Active Announcements List */}
+            <div className="space-y-4 text-xs">
+              <div>
+                <h4 className="font-bold text-slate-300 text-xs mb-2">Live Broadcasts On Gym Dashboards</h4>
+                {activeBroadcasts.length === 0 ? (
+                  <p className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 text-slate-400 text-center italic">
+                    No active broadcasts running. All tenant dashboards are clear.
+                  </p>
+                ) : (
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {activeBroadcasts.map((bc) => (
+                      <div
+                        key={bc.id}
+                        className={`p-3 rounded-2xl border flex items-center justify-between gap-3 ${
+                          bc.severity === 'critical'
+                            ? 'bg-rose-950/40 border-rose-500/40 text-rose-200'
+                            : bc.severity === 'warning'
+                            ? 'bg-amber-950/40 border-amber-500/40 text-amber-200'
+                            : 'bg-blue-950/40 border-blue-500/40 text-blue-200'
+                        }`}
+                      >
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-bold text-white text-xs">{bc.title}</span>
+                            <span className="text-[9px] uppercase px-1.5 py-0.2 rounded font-black tracking-wider bg-black/40">
+                              {bc.severity}
+                            </span>
+                          </div>
+                          <p className="text-[11px] opacity-80 mt-0.5 truncate">{bc.message}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleDismissBroadcast(bc.id)}
+                          className="px-2.5 py-1 rounded-lg bg-black/40 hover:bg-rose-500 text-slate-300 hover:text-white text-[10px] font-bold shrink-0 transition-colors"
+                        >
+                          Deactivate
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Compose New Broadcast Form */}
+              <form onSubmit={handlePublishBroadcast} className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-3">
+                <h4 className="font-bold text-white text-xs">Publish New Advisory or Incident Alert</h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-slate-400 font-semibold mb-1">Headline Title *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Scheduled Nightly Maintenance"
+                      value={broadcastForm.title}
+                      onChange={(e) => setBroadcastForm({ ...broadcastForm, title: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-400 font-semibold mb-1">Severity Level</label>
+                    <select
+                      value={broadcastForm.severity}
+                      onChange={(e) => setBroadcastForm({ ...broadcastForm, severity: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
+                    >
+                      <option value="info">Info / General Update</option>
+                      <option value="warning">Warning / Service Delay</option>
+                      <option value="critical">Critical / Incident Alert</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-slate-400 font-semibold mb-1">Broadcast Message Body *</label>
+                  <textarea
+                    required
+                    rows={2}
+                    placeholder="e.g. Core server upgrade scheduled for 11:00 PM IST. Reception QR kiosk scanners remain operational in offline mode."
+                    value={broadcastForm.message}
+                    onChange={(e) => setBroadcastForm({ ...broadcastForm, message: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-slate-400 font-semibold mb-1">Target Audience</label>
+                    <select
+                      value={broadcastForm.target_audience}
+                      onChange={(e) => setBroadcastForm({ ...broadcastForm, target_audience: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
+                    >
+                      <option value="all">All Portals (Owners + Coaches)</option>
+                      <option value="owners">Gym Owners & Admins Only</option>
+                      <option value="trainers">Floor Coaches Only</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-slate-400 font-semibold mb-1">Auto-Expire Duration</label>
+                    <select
+                      value={broadcastForm.expires_hours}
+                      onChange={(e) => setBroadcastForm({ ...broadcastForm, expires_hours: Number(e.target.value) })}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
+                    >
+                      <option value={4}>4 Hours</option>
+                      <option value={12}>12 Hours</option>
+                      <option value={24}>24 Hours</option>
+                      <option value={72}>3 Days</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2">
+                  <button
+                    type="submit"
+                    className="px-5 py-2.5 rounded-xl bg-purple-500 hover:bg-purple-400 text-slate-950 font-bold flex items-center gap-1.5 transition-transform active:scale-95 shadow-md shadow-purple-500/20"
+                  >
+                    <Radio className="w-3.5 h-3.5 stroke-[3]" />
+                    <span>Publish Broadcast Live</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PHASE 1 MODAL 3: PLATFORM AUDIT TRAIL STREAM */}
+      {isAuditModalOpen && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto animate-in fade-in">
+          <div className="bg-[#0f172a] border border-slate-700 rounded-3xl max-w-2xl w-full p-6 text-slate-100 shadow-2xl relative my-8">
+            <button
+              onClick={() => setIsAuditModalOpen(false)}
+              className="absolute top-5 right-5 p-1.5 rounded-full bg-slate-800 text-slate-400 hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 rounded-2xl bg-slate-800 text-emerald-400 flex items-center justify-center shrink-0">
+                <History className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-base text-white">Platform Administrative Audit Trail</h3>
+                <p className="text-xs text-slate-400">Real-time log of impersonation sessions, resets, and tenant updates</p>
+              </div>
+            </div>
+
+            {auditLoading ? (
+              <div className="py-12 flex flex-col items-center justify-center gap-2 text-slate-400 text-xs">
+                <RefreshCw className="w-5 h-5 animate-spin text-emerald-400" />
+                <span>Loading audit log stream...</span>
+              </div>
+            ) : auditLogs.length === 0 ? (
+              <p className="p-8 text-center text-slate-500 italic text-xs">No administrative actions logged yet.</p>
+            ) : (
+              <div className="rounded-2xl border border-slate-800 overflow-hidden bg-slate-900/70 max-h-96 overflow-y-auto text-xs">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="bg-slate-950 border-b border-slate-800 text-slate-400 text-[10px] uppercase font-semibold">
+                      <th className="py-2.5 px-3">Timestamp</th>
+                      <th className="py-2.5 px-3">Action</th>
+                      <th className="py-2.5 px-3">Target Facility</th>
+                      <th className="py-2.5 px-3">Admin</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60 font-mono text-[11px]">
+                    {auditLogs.map((log) => (
+                      <tr key={log.id} className="hover:bg-slate-800/40 transition-colors">
+                        <td className="py-2.5 px-3 text-slate-400 whitespace-nowrap">
+                          {new Date(log.created_at).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' })}
+                        </td>
+                        <td className="py-2.5 px-3">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                            log.action.includes('impersonate')
+                              ? 'bg-amber-500/20 text-amber-300'
+                              : log.action.includes('credential')
+                              ? 'bg-blue-500/20 text-blue-300'
+                              : 'bg-emerald-500/20 text-emerald-300'
+                          }`}>
+                            {log.action.replace('_', ' ')}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-3 text-slate-200">
+                          {log.gym_name || log.target_gym_id || 'Global Platform'}
+                        </td>
+                        <td className="py-2.5 px-3 text-slate-400">{log.admin_id}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       )}
