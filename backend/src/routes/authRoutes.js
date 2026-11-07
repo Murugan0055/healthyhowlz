@@ -26,6 +26,11 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Please enter your Mobile Number / Email and Security PIN / Password.' });
     }
 
+    const cleanDigits = userIdentifier.replace(/\D/g, '');
+    const phone10 = cleanDigits.length >= 10 ? cleanDigits.slice(-10) : userIdentifier;
+    const phoneWithCountry = `+91 ${phone10}`;
+    const phoneWithCountryNoSpace = `+91${phone10}`;
+
     const db = await getDb();
 
     // =========================================================
@@ -35,8 +40,8 @@ router.post('/login', async (req, res) => {
       `SELECT s.*, g.name as gym_name, g.city as gym_city, g.slug as gym_slug
        FROM staff s
        LEFT JOIN gyms g ON s.gym_id = g.id
-       WHERE (s.phone = ? OR s.email = ? OR s.id = ?) AND s.is_active = 1`,
-      [userIdentifier, userIdentifier, userIdentifier]
+       WHERE (s.phone = ? OR s.phone = ? OR s.phone = ? OR s.phone = ? OR s.email = ? OR s.id = ?) AND s.is_active = 1`,
+      [userIdentifier, phone10, phoneWithCountry, phoneWithCountryNoSpace, userIdentifier, userIdentifier]
     );
 
     if (staff) {
