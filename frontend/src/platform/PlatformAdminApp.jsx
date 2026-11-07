@@ -3111,6 +3111,41 @@ Rohan Varma,9840434567,rohan@gmail.com,Male,12,8999,${new Date().toISOString().s
                 </div>
               </div>
 
+              {owners && owners.length > 0 && (
+                <div className="p-3 rounded-2xl bg-slate-900/80 border border-slate-700/80 space-y-1.5">
+                  <label className="block text-[11px] font-bold text-emerald-400 uppercase tracking-wider">
+                    Franchise Multi-Branch Assignment
+                  </label>
+                  <select
+                    value={newGymData.owner_id || ''}
+                    onChange={(e) => {
+                      const selectedId = e.target.value;
+                      if (!selectedId) {
+                        setNewGymData({ ...newGymData, owner_id: '' });
+                      } else {
+                        const matched = owners.find(o => o.ownerId === selectedId);
+                        if (matched) {
+                          setNewGymData({
+                            ...newGymData,
+                            owner_id: matched.ownerId,
+                            owner_name: matched.ownerName,
+                            phone: matched.phone || newGymData.phone
+                          });
+                        }
+                      }
+                    }}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 text-xs"
+                  >
+                    <option value="">➕ New Independent Gym Owner (Create New)</option>
+                    {owners.map(o => (
+                      <option key={o.ownerId} value={o.ownerId}>
+                        🏢 Add as branch for {o.ownerName} ({o.gyms?.length || 1} existing branches)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-slate-400 font-semibold mb-1">City / Location *</label>

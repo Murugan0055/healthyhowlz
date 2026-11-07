@@ -128,12 +128,37 @@ router.post('/gyms', async (req, res) => {
     const safeSlug = (slug || name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-')).trim();
     const id = `gym-${safeSlug}-${Date.now().toString().slice(-4)}`;
 
-    const resolvedOwnerId = owner_id || (`owner-${safeSlug}-${Date.now().toString().slice(-4)}`);
+    // Resolve or Auto-Create Owner Staff Account
+    let resolvedOwnerId = owner_id;
+    const cleanPhone = (phone || '').trim();
+
+    if (cleanPhone) {
+      const existingOwnerStaff = await db.get('SELECT * FROM staff WHERE phone = ?', [cleanPhone]);
+      if (existingOwnerStaff) {
+        resolvedOwnerId = existingOwnerStaff.id;
+      }
+    }
+
+    if (!resolvedOwnerId) {
+      resolvedOwnerId = `staff-owner-${safeSlug}-${Date.now().toString().slice(-4)}`;
+      await db.run(
+        `INSERT INTO staff (id, name, role, phone, email, security_pin, gym_id, is_active)
+         VALUES (?, ?, 'owner', ?, ?, ?, ?, 1)`,
+        [resolvedOwnerId, owner_name, cleanPhone || `+91 9840${Date.now().toString().slice(-6)}`, email || '', kiosk_pin || '1234', id]
+      );
+    }
 
     await db.run(
       `INSERT INTO gyms (id, name, slug, owner_id, owner_name, phone, email, address, city, state, pincode, gstin, status, subscription_tier, monthly_fee, kiosk_pin)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [id, name, safeSlug, resolvedOwnerId, owner_name, phone || '', email || '', address || '', city || 'Vellore', state, pincode || '', gstin || '', status, subscription_tier, Number(monthly_fee), kiosk_pin]
+    );
+
+    // Initialize Reception Kiosk record for immediate hardware diagnostics
+    await db.run(
+      `INSERT OR IGNORE INTO kiosks (id, gym_id, device_name, ip_address, status, latency_ms, last_heartbeat)
+       VALUES (?, ?, ?, ?, 'online', 24, CURRENT_TIMESTAMP)`,
+      [`kiosk-${id}-frontdesk`, id, `${name} Reception Kiosk Tab 1`, '192.168.1.100']
     );
 
     // Also copy official plans for the new gym so it has standard starter, classic, transformation, annual
