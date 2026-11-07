@@ -2,9 +2,9 @@ const BASE_URL = '/api';
 
 export const getActiveGymId = () => {
   try {
-    return localStorage.getItem('healthyhowlz_active_gym_id') || 'gym-gudiyatham';
+    return localStorage.getItem('healthyhowlz_active_gym_id') || '';
   } catch (e) {
-    return 'gym-gudiyatham';
+    return '';
   }
 };
 

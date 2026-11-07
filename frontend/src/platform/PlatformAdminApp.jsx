@@ -27,12 +27,12 @@ export default function PlatformAdminApp({ onLogout, onLaunchGym }) {
   const [newGymData, setNewGymData] = useState({
     name: '',
     slug: '',
-    city: 'Vellore',
+    city: '',
     address: '',
-    owner_name: 'Karthik Raja',
-    phone: '+91 98401 23456',
-    email: 'karthik@healthyhowlz.com',
-    gstin: '33AAAAE1234M1Z5',
+    owner_name: '',
+    phone: '',
+    email: '',
+    gstin: '',
     subscription_tier: 'pro_growth',
     monthly_fee: 2499,
     kiosk_pin: '1234',
@@ -275,12 +275,12 @@ export default function PlatformAdminApp({ onLogout, onLaunchGym }) {
       setNewGymData({
         name: '',
         slug: '',
-        city: 'Vellore',
+        city: '',
         address: '',
-        owner_name: 'Karthik Raja',
-        phone: '+91 98401 23456',
-        email: 'karthik@healthyhowlz.com',
-        gstin: '33AAAAE1234M1Z5',
+        owner_name: '',
+        phone: '',
+        email: '',
+        gstin: '',
         subscription_tier: 'pro_growth',
         monthly_fee: 2499,
         kiosk_pin: '1234',
@@ -582,7 +582,11 @@ Rohan Varma,9840434567,rohan@gmail.com,Male,12,8999,${new Date().toISOString().s
   const handleCreateTicket = async (e) => {
     e.preventDefault();
     try {
-      const targetGym = newTicketForm.gym_id || (gyms[0] ? gyms[0].id : 'gym-gudiyatham');
+      const targetGym = newTicketForm.gym_id || gyms[0]?.id;
+      if (!targetGym) {
+        showNotification('Please onboard at least one gym facility before lodging tickets.', 'error');
+        return;
+      }
       const res = await api.createSupportTicket({ ...newTicketForm, gym_id: targetGym });
       showNotification(res.message);
       setIsNewTicketOpen(false);
@@ -656,6 +660,8 @@ Rohan Varma,9840434567,rohan@gmail.com,Male,12,8999,${new Date().toISOString().s
     const matchesStatus = statusFilter === 'all' || g.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  const multiBranchOwners = (owners || []).filter(o => (o.gyms || []).length > 1);
 
   return (
     <div className="min-h-screen bg-[#070a10] text-slate-100 flex flex-col md:flex-row font-sans selection:bg-emerald-500 selection:text-white">
@@ -1229,7 +1235,7 @@ Rohan Varma,9840434567,rohan@gmail.com,Male,12,8999,${new Date().toISOString().s
                 </div>
               </div>
               <div className="text-xl sm:text-3xl font-black text-emerald-400">
-                ₹{(stats?.totalMRR || 15895).toLocaleString('en-IN')}
+                ₹{(stats?.totalMRR ?? 0).toLocaleString('en-IN')}
               </div>
               <div className="mt-2 text-[10px] sm:text-[11px] text-slate-400 font-medium">
                 Monthly Subscription Revenue
@@ -1245,7 +1251,7 @@ Rohan Varma,9840434567,rohan@gmail.com,Male,12,8999,${new Date().toISOString().s
                 </div>
               </div>
               <div className="text-xl sm:text-3xl font-black text-white">
-                {stats?.totalPlatformMembers || 24}+
+                {stats?.totalPlatformMembers ?? 0}
               </div>
               <div className="mt-2 text-[10px] sm:text-[11px] text-blue-400 font-medium">
                 Across all tenant locations
@@ -1261,10 +1267,14 @@ Rohan Varma,9840434567,rohan@gmail.com,Male,12,8999,${new Date().toISOString().s
                 </div>
               </div>
               <div className="text-xl sm:text-3xl font-black text-white">
-                {stats?.totalOwners || 3} Owners
+                {stats?.totalOwners ?? 0} {stats?.totalOwners === 1 ? 'Owner' : 'Owners'}
               </div>
               <div className="mt-2 text-[10px] sm:text-[11px] text-amber-400 font-medium truncate">
-                Karthik Raja: 3 Gym Branches
+                {multiBranchOwners.length > 0
+                  ? `${multiBranchOwners[0].ownerName}: ${multiBranchOwners[0].gyms.length} Gym Branches`
+                  : (stats?.totalOwners ?? 0) > 0
+                  ? `${stats?.totalOwners} Active Facility ${(stats?.totalOwners ?? 0) === 1 ? 'Owner' : 'Owners'}`
+                  : 'Ready for Onboarding'}
               </div>
             </div>
           </section>
@@ -1278,9 +1288,21 @@ Rohan Varma,9840434567,rohan@gmail.com,Male,12,8999,${new Date().toISOString().s
                 </span>
                 <h2 className="text-sm sm:text-base font-bold text-white">One Gym Owner — Multiple Facility Branches</h2>
               </div>
-              <p className="text-xs text-slate-300 max-w-2xl">
-                Owner <span className="font-bold text-white">Karthik Raja</span> manages 3 connected facilities: <span className="text-emerald-400 font-bold">Gudiyatham</span> (<code className="text-xs text-slate-200">/gudiyatham</code>), <span className="text-emerald-400 font-bold">Vellore East</span> (<code className="text-xs text-slate-200">/vellore</code>), and <span className="text-emerald-400 font-bold">Chennai Anna Nagar</span> (<code className="text-xs text-slate-200">/chennai</code>).
-              </p>
+              {multiBranchOwners.length > 0 ? (
+                <p className="text-xs text-slate-300 max-w-2xl">
+                  Multi-Branch Owner <span className="font-bold text-white">{multiBranchOwners[0].ownerName}</span> manages {multiBranchOwners[0].gyms.length} connected facilities:{' '}
+                  {multiBranchOwners[0].gyms.map((g, idx) => (
+                    <span key={g.id}>
+                      {idx > 0 && ', '}
+                      <span className="text-emerald-400 font-bold">{g.name}</span> (<code className="text-xs text-slate-200">/{g.slug || g.id}</code>)
+                    </span>
+                  ))}.
+                </p>
+              ) : (
+                <p className="text-xs text-slate-300 max-w-2xl">
+                  HealthyHowlz SaaS Multi-Tenancy Architecture • Single gym owners or franchise groups can operate multiple facility branches with isolated member rosters, unified P&amp;L reporting, and role-based staff permissions.
+                </p>
+              )}
             </div>
             <button
               onClick={() => setIsProvisionOpen(true)}
@@ -1347,33 +1369,59 @@ Rohan Varma,9840434567,rohan@gmail.com,Male,12,8999,${new Date().toISOString().s
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60">
-                  {filteredGyms.map((gym) => {
-                    const isKarthik = gym.owner_id === 'staff-owner';
-                    const gymRoute = `/${gym.slug || gym.id}`;
+                  {filteredGyms.length === 0 ? (
+                    <tr>
+                      <td colSpan="7" className="py-16 px-4 text-center">
+                        <div className="max-w-md mx-auto space-y-3">
+                          <div className="w-12 h-12 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center mx-auto text-emerald-400">
+                            <Building2 className="w-6 h-6" />
+                          </div>
+                          <h4 className="text-base font-bold text-white">No Gym Facilities Found</h4>
+                          <p className="text-xs text-slate-400">
+                            {searchQuery || statusFilter !== 'all'
+                              ? 'No gym facilities match your active search query or filter criteria.'
+                              : 'Your HealthyHowlz SaaS platform currently has no active gym tenants. Click below to onboard your first facility branch.'}
+                          </p>
+                          {!searchQuery && statusFilter === 'all' && (
+                            <button
+                              onClick={() => setIsProvisionOpen(true)}
+                              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-lg shadow-emerald-500/20 transition-transform active:scale-95 mt-1"
+                            >
+                              <Plus className="w-4 h-4 stroke-[3]" />
+                              <span>Onboard First Gym</span>
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredGyms.map((gym) => {
+                      const isMultiBranch = gyms.filter(g => g.owner_id && g.owner_id === gym.owner_id).length > 1;
+                      const gymRoute = `/${gym.slug || gym.id}`;
 
-                    const validUntilStr = gym.valid_until ? gym.valid_until.split('T')[0] : '2026-12-31';
-                    const todayDate = new Date().toISOString().split('T')[0];
-                    const daysRemaining = Math.ceil((new Date(validUntilStr) - new Date(todayDate)) / (1000 * 60 * 60 * 24));
-                    const isGrace = daysRemaining <= 0 && daysRemaining >= -5;
-                    const isExpired = daysRemaining < -5;
+                      const validUntilStr = gym.valid_until ? gym.valid_until.split('T')[0] : '2026-12-31';
+                      const todayDate = new Date().toISOString().split('T')[0];
+                      const daysRemaining = Math.ceil((new Date(validUntilStr) - new Date(todayDate)) / (1000 * 60 * 60 * 24));
+                      const isGrace = daysRemaining <= 0 && daysRemaining >= -5;
+                      const isExpired = daysRemaining < -5;
 
-                    return (
-                      <tr key={gym.id} className="hover:bg-slate-800/40 transition-colors">
-                        {/* Gym Name, Slug & City */}
-                        <td className="py-4 px-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-xl bg-slate-800 border border-slate-700/80 flex items-center justify-center text-emerald-400 font-bold shrink-0">
-                              <Building2 className="w-4 h-4" />
-                            </div>
-                            <div>
-                              <div className="font-bold text-white text-sm flex items-center gap-2">
-                                <span>{gym.name}</span>
-                                {isKarthik && (
-                                  <span className="text-[9px] px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 font-bold">
-                                    Multi-Branch
-                                  </span>
-                                )}
+                      return (
+                        <tr key={gym.id} className="hover:bg-slate-800/40 transition-colors">
+                          {/* Gym Name, Slug & City */}
+                          <td className="py-4 px-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-9 h-9 rounded-xl bg-slate-800 border border-slate-700/80 flex items-center justify-center text-emerald-400 font-bold shrink-0">
+                                <Building2 className="w-4 h-4" />
                               </div>
+                              <div>
+                                <div className="font-bold text-white text-sm flex items-center gap-2">
+                                  <span>{gym.name}</span>
+                                  {isMultiBranch && (
+                                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 font-bold">
+                                      Multi-Branch
+                                    </span>
+                                  )}
+                                </div>
                               <div className="text-[11px] text-slate-400 flex items-center gap-2 mt-0.5">
                                 <span className="flex items-center gap-1">
                                   <MapPin className="w-3 h-3 text-slate-500" />
@@ -1527,7 +1575,7 @@ Rohan Varma,9840434567,rohan@gmail.com,Male,12,8999,${new Date().toISOString().s
                         </td>
                       </tr>
                     );
-                  })}
+                  }))}
                 </tbody>
               </table>
             </div>
@@ -1535,36 +1583,58 @@ Rohan Varma,9840434567,rohan@gmail.com,Male,12,8999,${new Date().toISOString().s
 
           {/* 2. MOBILE VIEW: Responsive Gym Cards (Visible strictly on mobile screens < md: 768px) */}
           <div className="block md:hidden space-y-3">
-            {filteredGyms.map((gym) => {
-              const isKarthik = gym.owner_id === 'staff-owner';
-              const gymRoute = `/${gym.slug || gym.id}`;
+            {filteredGyms.length === 0 ? (
+              <div className="p-8 rounded-3xl bg-slate-900/90 border border-slate-800 text-center space-y-3 shadow-xl">
+                <div className="w-12 h-12 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center mx-auto text-emerald-400">
+                  <Building2 className="w-6 h-6" />
+                </div>
+                <h4 className="text-base font-bold text-white">No Gym Facilities Found</h4>
+                <p className="text-xs text-slate-400">
+                  {searchQuery || statusFilter !== 'all'
+                    ? 'No gym facilities match your active search query or filter criteria.'
+                    : 'Your HealthyHowlz SaaS platform currently has no active gym tenants. Tap below to onboard your first facility.'}
+                </p>
+                {!searchQuery && statusFilter === 'all' && (
+                  <button
+                    onClick={() => setIsProvisionOpen(true)}
+                    className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-lg shadow-emerald-500/20 transition-transform active:scale-95"
+                  >
+                    <Plus className="w-4 h-4 stroke-[3]" />
+                    <span>Onboard First Gym</span>
+                  </button>
+                )}
+              </div>
+            ) : (
+              filteredGyms.map((gym) => {
+                const isMultiBranch = gyms.filter(g => g.owner_id && g.owner_id === gym.owner_id).length > 1;
+                const gymRoute = `/${gym.slug || gym.id}`;
 
-              const validUntilStr = gym.valid_until ? gym.valid_until.split('T')[0] : '2026-12-31';
-              const todayDate = new Date().toISOString().split('T')[0];
-              const daysRemaining = Math.ceil((new Date(validUntilStr) - new Date(todayDate)) / (1000 * 60 * 60 * 24));
-              const isGrace = daysRemaining <= 0 && daysRemaining >= -5;
-              const isExpired = daysRemaining < -5;
+                const validUntilStr = gym.valid_until ? gym.valid_until.split('T')[0] : '2026-12-31';
+                const todayDate = new Date().toISOString().split('T')[0];
+                const daysRemaining = Math.ceil((new Date(validUntilStr) - new Date(todayDate)) / (1000 * 60 * 60 * 24));
+                const isGrace = daysRemaining <= 0 && daysRemaining >= -5;
+                const isExpired = daysRemaining < -5;
 
-              return (
-                <div
-                  key={`card-${gym.id}`}
-                  className="p-4 rounded-3xl bg-slate-900/90 border border-slate-800 space-y-3 shadow-xl"
-                >
-                  {/* Card Header: Icon, Name, Multi-Branch & City + Static Status Pill & Route */}
-                  <div className="flex items-start justify-between gap-2.5">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-10 h-10 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center text-emerald-400 font-bold shrink-0">
-                        <Building2 className="w-5 h-5" />
-                      </div>
-                      <div className="min-w-0">
-                        <h4 className="font-bold text-white text-sm flex items-center gap-1.5 flex-wrap">
-                          <span className="truncate">{gym.name}</span>
-                          {isKarthik && (
-                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 font-bold shrink-0">
-                              Multi-Branch
-                            </span>
-                          )}
-                        </h4>
+                return (
+                  <div
+                    key={`card-${gym.id}`}
+                    className="p-4 rounded-3xl bg-slate-900/90 border border-slate-800 space-y-3 shadow-xl"
+                  >
+                    {/* Card Header: Icon, Name, Multi-Branch & City + Static Status Pill & Route */}
+                    <div className="flex items-start justify-between gap-2.5">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-10 h-10 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center text-emerald-400 font-bold shrink-0">
+                          <Building2 className="w-5 h-5" />
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="font-bold text-white text-sm flex items-center gap-1.5 flex-wrap">
+                            <span className="truncate">{gym.name}</span>
+                            {isMultiBranch && (
+                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 font-bold shrink-0">
+                                Multi-Branch
+                              </span>
+                            )}
+                          </h4>
                         <p className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
                           <MapPin className="w-3 h-3 text-slate-500 shrink-0" />
                           <span className="truncate">{gym.city}, {gym.state || 'Tamil Nadu'}</span>
@@ -1696,7 +1766,7 @@ Rohan Varma,9840434567,rohan@gmail.com,Male,12,8999,${new Date().toISOString().s
                   </div>
                 </div>
               );
-            })}
+            }))}
           </div>
 
         </section>
@@ -1747,7 +1817,18 @@ Rohan Varma,9840434567,rohan@gmail.com,Male,12,8999,${new Date().toISOString().s
 
             {/* Kiosks Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
-              {kiosks.map((k) => (
+              {kiosks.length === 0 ? (
+                <div className="col-span-full py-16 px-6 rounded-3xl bg-slate-900/60 border border-slate-800 text-center space-y-3">
+                  <div className="w-12 h-12 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center mx-auto text-emerald-400">
+                    <Smartphone className="w-6 h-6" />
+                  </div>
+                  <h4 className="text-base font-bold text-white">No Kiosk Terminals Connected</h4>
+                  <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                    Front-desk tablet terminals and QR check-in kiosks register telemetry heartbeats automatically when the front-desk app is launched.
+                  </p>
+                </div>
+              ) : (
+                kiosks.map((k) => (
                 <div
                   key={`kiosk-${k.gymId}`}
                   className="p-4 sm:p-5 rounded-3xl bg-slate-900/90 border border-slate-800 space-y-3.5 shadow-xl relative overflow-hidden"
@@ -1828,7 +1909,7 @@ Rohan Varma,9840434567,rohan@gmail.com,Male,12,8999,${new Date().toISOString().s
                     </button>
                   </div>
                 </div>
-              ))}
+              )))}
             </div>
           </section>
         )}
@@ -1899,124 +1980,156 @@ Rohan Varma,9840434567,rohan@gmail.com,Male,12,8999,${new Date().toISOString().s
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60">
-                  {tickets
-                    .filter(t => ticketFilter === 'all' || t.status === ticketFilter)
-                    .map((tkt) => (
-                      <tr key={tkt.id} className="hover:bg-slate-800/40 transition-colors">
-                        <td className="py-3 px-4 font-mono font-bold text-white whitespace-nowrap">
-                          {tkt.ticket_number}
-                        </td>
-                        <td className="py-3 px-4">
-                          <span className="font-bold text-white block">{tkt.gym_name}</span>
-                          <span className="text-[11px] text-slate-400">{tkt.requester_name} ({tkt.requester_role})</span>
-                        </td>
-                        <td className="py-3 px-4">
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-slate-800 text-slate-300 border border-slate-700">
-                            {tkt.category}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                            tkt.priority === 'critical' || tkt.priority === 'high'
-                              ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                              : tkt.priority === 'medium'
-                              ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                              : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
-                          }`}>
-                            {tkt.priority}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 max-w-xs">
-                          <span className="font-bold text-white block truncate">{tkt.subject}</span>
-                          <span className="text-[11px] text-slate-400 block truncate">{tkt.description}</span>
-                          {tkt.resolution_notes && (
-                            <span className="text-[10px] text-emerald-400 mt-0.5 block truncate">
-                              ✓ {tkt.resolution_notes}
+                  {tickets.filter(t => ticketFilter === 'all' || t.status === ticketFilter).length === 0 ? (
+                    <tr>
+                      <td colSpan="7" className="py-16 px-4 text-center">
+                        <div className="max-w-md mx-auto space-y-3">
+                          <div className="w-12 h-12 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center mx-auto text-purple-400">
+                            <Ticket className="w-6 h-6" />
+                          </div>
+                          <h4 className="text-base font-bold text-white">No Support Tickets Logged</h4>
+                          <p className="text-xs text-slate-400">
+                            {ticketFilter !== 'all'
+                              ? `No ${ticketFilter.replace('_', ' ')} support tickets found.`
+                              : 'All facility operations are running smoothly. No open disputes, hardware defects, or support tickets.'}
+                          </p>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    tickets
+                      .filter(t => ticketFilter === 'all' || t.status === ticketFilter)
+                      .map((tkt) => (
+                        <tr key={tkt.id} className="hover:bg-slate-800/40 transition-colors">
+                          <td className="py-3 px-4 font-mono font-bold text-white whitespace-nowrap">
+                            {tkt.ticket_number}
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className="font-bold text-white block">{tkt.gym_name}</span>
+                            <span className="text-[11px] text-slate-400">{tkt.requester_name} ({tkt.requester_role})</span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-slate-800 text-slate-300 border border-slate-700">
+                              {tkt.category}
                             </span>
-                          )}
-                        </td>
-                        <td className="py-3 px-4 whitespace-nowrap">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border flex items-center gap-1 w-fit ${
-                            tkt.status === 'resolved'
-                              ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-                              : tkt.status === 'in_progress'
-                              ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
-                              : 'bg-rose-500/15 text-rose-400 border-rose-500/30'
-                          }`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${
-                              tkt.status === 'resolved' ? 'bg-emerald-400' : tkt.status === 'in_progress' ? 'bg-amber-400 animate-pulse' : 'bg-rose-400 animate-ping'
-                            }`} />
-                            {tkt.status.replace('_', ' ')}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-right whitespace-nowrap">
-                          <button
-                            onClick={() => handleOpenEditTicket(tkt)}
-                            className="px-3 py-1.5 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 text-purple-300 border border-purple-500/30 font-bold transition-all active:scale-95"
-                          >
-                            Resolve / Edit
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                              tkt.priority === 'critical' || tkt.priority === 'high'
+                                ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                                : tkt.priority === 'medium'
+                                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                                : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                            }`}>
+                              {tkt.priority}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 max-w-xs">
+                            <span className="font-bold text-white block truncate">{tkt.subject}</span>
+                            <span className="text-[11px] text-slate-400 block truncate">{tkt.description}</span>
+                            {tkt.resolution_notes && (
+                              <span className="text-[10px] text-emerald-400 mt-0.5 block truncate">
+                                ✓ {tkt.resolution_notes}
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 whitespace-nowrap">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border flex items-center gap-1 w-fit ${
+                              tkt.status === 'resolved'
+                                ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                                : tkt.status === 'in_progress'
+                                ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                                : 'bg-rose-500/15 text-rose-400 border-rose-500/30'
+                            }`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${
+                                tkt.status === 'resolved' ? 'bg-emerald-400' : tkt.status === 'in_progress' ? 'bg-amber-400 animate-pulse' : 'bg-rose-400 animate-ping'
+                              }`} />
+                              {tkt.status.replace('_', ' ')}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-right whitespace-nowrap">
+                            <button
+                              onClick={() => handleOpenEditTicket(tkt)}
+                              className="px-3 py-1.5 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 text-purple-300 border border-purple-500/30 font-bold transition-all active:scale-95"
+                            >
+                              Resolve / Edit
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                  )}
                 </tbody>
               </table>
             </div>
 
             {/* Tickets Cards (Mobile) */}
             <div className="block md:hidden space-y-3">
-              {tickets
-                .filter(t => ticketFilter === 'all' || t.status === ticketFilter)
-                .map((tkt) => (
-                  <div key={`m-tkt-${tkt.id}`} className="p-4 rounded-3xl bg-slate-900 border border-slate-800 space-y-3 shadow-xl">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono font-bold text-white text-xs">{tkt.ticket_number}</span>
-                          <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold uppercase tracking-wider ${
-                            tkt.priority === 'critical' || tkt.priority === 'high'
-                              ? 'bg-rose-500/20 text-rose-300'
-                              : 'bg-amber-500/20 text-amber-300'
-                          }`}>
-                            {tkt.priority}
-                          </span>
-                        </div>
-                        <h4 className="font-bold text-white text-xs mt-1">{tkt.subject}</h4>
-                        <p className="text-[11px] text-slate-400">{tkt.gym_name} • {tkt.requester_name}</p>
-                      </div>
-
-                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border shrink-0 ${
-                        tkt.status === 'resolved'
-                          ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-                          : tkt.status === 'in_progress'
-                          ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
-                          : 'bg-rose-500/15 text-rose-400 border-rose-500/30'
-                      }`}>
-                        {tkt.status.replace('_', ' ')}
-                      </span>
-                    </div>
-
-                    <p className="text-xs text-slate-300 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/80 leading-relaxed">
-                      {tkt.description}
-                    </p>
-
-                    {tkt.resolution_notes && (
-                      <div className="text-[11px] text-emerald-400 flex items-center gap-1.5">
-                        <Check className="w-3.5 h-3.5 shrink-0" />
-                        <span>Resolution: {tkt.resolution_notes}</span>
-                      </div>
-                    )}
-
-                    <div className="pt-1 flex items-center justify-end">
-                      <button
-                        onClick={() => handleOpenEditTicket(tkt)}
-                        className="w-full py-2 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 text-purple-300 border border-purple-500/30 font-bold text-xs"
-                      >
-                        Resolve / Edit Ticket
-                      </button>
-                    </div>
+              {tickets.filter(t => ticketFilter === 'all' || t.status === ticketFilter).length === 0 ? (
+                <div className="p-8 rounded-3xl bg-slate-900 border border-slate-800 text-center space-y-3 shadow-xl">
+                  <div className="w-12 h-12 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center mx-auto text-purple-400">
+                    <Ticket className="w-6 h-6" />
                   </div>
-                ))}
+                  <h4 className="text-base font-bold text-white">No Support Tickets Logged</h4>
+                  <p className="text-xs text-slate-400">
+                    {ticketFilter !== 'all'
+                      ? `No ${ticketFilter.replace('_', ' ')} support tickets found.`
+                      : 'All facility operations are running smoothly. No open disputes or tickets.'}
+                  </p>
+                </div>
+              ) : (
+                tickets
+                  .filter(t => ticketFilter === 'all' || t.status === ticketFilter)
+                  .map((tkt) => (
+                    <div key={`m-tkt-${tkt.id}`} className="p-4 rounded-3xl bg-slate-900 border border-slate-800 space-y-3 shadow-xl">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono font-bold text-white text-xs">{tkt.ticket_number}</span>
+                            <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold uppercase tracking-wider ${
+                              tkt.priority === 'critical' || tkt.priority === 'high'
+                                ? 'bg-rose-500/20 text-rose-300'
+                                : 'bg-amber-500/20 text-amber-300'
+                            }`}>
+                              {tkt.priority}
+                            </span>
+                          </div>
+                          <h4 className="font-bold text-white text-xs mt-1">{tkt.subject}</h4>
+                          <p className="text-[11px] text-slate-400">{tkt.gym_name} • {tkt.requester_name}</p>
+                        </div>
+
+                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border shrink-0 ${
+                          tkt.status === 'resolved'
+                            ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                            : tkt.status === 'in_progress'
+                            ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                            : 'bg-rose-500/15 text-rose-400 border-rose-500/30'
+                        }`}>
+                          {tkt.status.replace('_', ' ')}
+                        </span>
+                      </div>
+
+                      <p className="text-xs text-slate-300 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/80 leading-relaxed">
+                        {tkt.description}
+                      </p>
+
+                      {tkt.resolution_notes && (
+                        <div className="text-[11px] text-emerald-400 flex items-center gap-1.5">
+                          <Check className="w-3.5 h-3.5 shrink-0" />
+                          <span>Resolution: {tkt.resolution_notes}</span>
+                        </div>
+                      )}
+
+                      <div className="pt-1 flex items-center justify-end">
+                        <button
+                          onClick={() => handleOpenEditTicket(tkt)}
+                          className="w-full py-2 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 text-purple-300 border border-purple-500/30 font-bold text-xs"
+                        >
+                          Resolve / Edit Ticket
+                        </button>
+                      </div>
+                    </div>
+                  ))
+              )}
             </div>
           </section>
         )}
@@ -2442,7 +2555,7 @@ Rohan Varma,9840434567,rohan@gmail.com,Male,12,8999,${new Date().toISOString().s
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Salem"
+                    placeholder="e.g. Chennai"
                     value={newGymData.city}
                     onChange={(e) => setNewGymData({ ...newGymData, city: e.target.value })}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
@@ -2453,7 +2566,7 @@ Rohan Varma,9840434567,rohan@gmail.com,Male,12,8999,${new Date().toISOString().s
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Karthik Raja"
+                    placeholder="e.g. Rajesh Kumar"
                     value={newGymData.owner_name}
                     onChange={(e) => setNewGymData({ ...newGymData, owner_name: e.target.value })}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
@@ -2466,6 +2579,7 @@ Rohan Varma,9840434567,rohan@gmail.com,Male,12,8999,${new Date().toISOString().s
                   <label className="block text-slate-400 font-semibold mb-1">Owner Phone</label>
                   <input
                     type="text"
+                    placeholder="e.g. +91 98765 43210"
                     value={newGymData.phone}
                     onChange={(e) => setNewGymData({ ...newGymData, phone: e.target.value })}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
@@ -2475,6 +2589,7 @@ Rohan Varma,9840434567,rohan@gmail.com,Male,12,8999,${new Date().toISOString().s
                   <label className="block text-slate-400 font-semibold mb-1">Owner Email</label>
                   <input
                     type="email"
+                    placeholder="e.g. owner@gymbrand.com"
                     value={newGymData.email}
                     onChange={(e) => setNewGymData({ ...newGymData, email: e.target.value })}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"

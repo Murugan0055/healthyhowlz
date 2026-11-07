@@ -492,22 +492,22 @@ async function initSchema(db) {
   await ensureColumn(db, 'members', 'pt_session_pin', "TEXT DEFAULT '4821'");
 
   // Multi-tenant SaaS columns (gym_id)
-  await ensureColumn(db, 'staff', 'gym_id', "TEXT DEFAULT 'gym-gudiyatham'");
-  await ensureColumn(db, 'members', 'gym_id', "TEXT DEFAULT 'gym-gudiyatham'");
-  await ensureColumn(db, 'membership_plans', 'gym_id', "TEXT DEFAULT 'gym-gudiyatham'");
-  await ensureColumn(db, 'lockers', 'gym_id', "TEXT DEFAULT 'gym-gudiyatham'");
-  await ensureColumn(db, 'checkins', 'gym_id', "TEXT DEFAULT 'gym-gudiyatham'");
-  await ensureColumn(db, 'leads', 'gym_id', "TEXT DEFAULT 'gym-gudiyatham'");
-  await ensureColumn(db, 'invoices', 'gym_id', "TEXT DEFAULT 'gym-gudiyatham'");
-  await ensureColumn(db, 'expenses', 'gym_id', "TEXT DEFAULT 'gym-gudiyatham'");
-  await ensureColumn(db, 'pos_products', 'gym_id', "TEXT DEFAULT 'gym-gudiyatham'");
-  await ensureColumn(db, 'pos_sales', 'gym_id', "TEXT DEFAULT 'gym-gudiyatham'");
-  await ensureColumn(db, 'workout_routines', 'gym_id', "TEXT DEFAULT 'gym-gudiyatham'");
-  await ensureColumn(db, 'diet_plans', 'gym_id', "TEXT DEFAULT 'gym-gudiyatham'");
-  await ensureColumn(db, 'pt_sessions', 'gym_id', "TEXT DEFAULT 'gym-gudiyatham'");
-  await ensureColumn(db, 'floor_checkins', 'gym_id', "TEXT DEFAULT 'gym-gudiyatham'");
-  await ensureColumn(db, 'gym_notices', 'gym_id', "TEXT DEFAULT 'gym-gudiyatham'");
-  await ensureColumn(db, 'cash_drawer_reconciliations', 'gym_id', "TEXT DEFAULT 'gym-gudiyatham'");
+  await ensureColumn(db, 'staff', 'gym_id', "TEXT DEFAULT NULL");
+  await ensureColumn(db, 'members', 'gym_id', "TEXT DEFAULT NULL");
+  await ensureColumn(db, 'membership_plans', 'gym_id', "TEXT DEFAULT NULL");
+  await ensureColumn(db, 'lockers', 'gym_id', "TEXT DEFAULT NULL");
+  await ensureColumn(db, 'checkins', 'gym_id', "TEXT DEFAULT NULL");
+  await ensureColumn(db, 'leads', 'gym_id', "TEXT DEFAULT NULL");
+  await ensureColumn(db, 'invoices', 'gym_id', "TEXT DEFAULT NULL");
+  await ensureColumn(db, 'expenses', 'gym_id', "TEXT DEFAULT NULL");
+  await ensureColumn(db, 'pos_products', 'gym_id', "TEXT DEFAULT NULL");
+  await ensureColumn(db, 'pos_sales', 'gym_id', "TEXT DEFAULT NULL");
+  await ensureColumn(db, 'workout_routines', 'gym_id', "TEXT DEFAULT NULL");
+  await ensureColumn(db, 'diet_plans', 'gym_id', "TEXT DEFAULT NULL");
+  await ensureColumn(db, 'pt_sessions', 'gym_id', "TEXT DEFAULT NULL");
+  await ensureColumn(db, 'floor_checkins', 'gym_id', "TEXT DEFAULT NULL");
+  await ensureColumn(db, 'gym_notices', 'gym_id', "TEXT DEFAULT NULL");
+  await ensureColumn(db, 'cash_drawer_reconciliations', 'gym_id', "TEXT DEFAULT NULL");
 }
 
 async function ensureColumn(db, table, column, definition) {

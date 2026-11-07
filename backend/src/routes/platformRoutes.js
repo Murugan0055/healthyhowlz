@@ -128,7 +128,7 @@ router.post('/gyms', async (req, res) => {
     const safeSlug = (slug || name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-')).trim();
     const id = `gym-${safeSlug}-${Date.now().toString().slice(-4)}`;
 
-    const resolvedOwnerId = owner_id || 'staff-owner'; // defaults to Karthik Raja if linking to him
+    const resolvedOwnerId = owner_id || (`owner-${safeSlug}-${Date.now().toString().slice(-4)}`);
 
     await db.run(
       `INSERT INTO gyms (id, name, slug, owner_id, owner_name, phone, email, address, city, state, pincode, gstin, status, subscription_tier, monthly_fee, kiosk_pin)

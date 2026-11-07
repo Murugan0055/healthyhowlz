@@ -64,7 +64,7 @@ router.post('/login', async (req, res) => {
         );
         return res.json({
           token,
-          user: { id: `root-${role}`, name, role, email: `${role}@elitegymgudiyatham.com`, phone: '9999999999' }
+          user: { id: `root-${role}`, name, role, email: `${role}@healthyhowlz.com`, phone: '9999999999' }
         });
       }
       return res.status(401).json({ error: 'No active user found with this phone or email.' });
@@ -133,7 +133,7 @@ router.post('/', async (req, res) => {
     const hashedPassword = await bcrypt.hash(password || 'admin123', 10);
     const securityPin = pin && pin.length >= 4 ? pin : '1234';
     const commRate = parseFloat(commissionRate || '5.0');
-    const assignedGymId = gymId || 'gym-gudiyatham';
+    const assignedGymId = gymId || null;
     const salary = parseFloat(baseSalary || (assignedRole === 'trainer' ? 18000.0 : 15000.0));
 
     await db.run(
@@ -187,7 +187,7 @@ router.put('/:id', async (req, res) => {
       passwordHash = await bcrypt.hash(password.trim(), 10);
     }
 
-    const assignedGymId = gymId || currentStaff.gym_id || 'gym-gudiyatham';
+    const assignedGymId = gymId !== undefined ? gymId : (currentStaff.gym_id || null);
     const salary = baseSalary !== undefined ? parseFloat(baseSalary) : currentStaff.base_salary;
 
     await db.run(

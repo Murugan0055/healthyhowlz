@@ -6,9 +6,9 @@ const TenantContext = createContext(null);
 export function TenantProvider({ children }) {
   const [currentGymId, setCurrentGymId] = useState(() => {
     try {
-      return localStorage.getItem('healthyhowlz_active_gym_id') || 'gym-gudiyatham';
+      return localStorage.getItem('healthyhowlz_active_gym_id') || '';
     } catch (e) {
-      return 'gym-gudiyatham';
+      return '';
     }
   });
 
@@ -20,13 +20,13 @@ export function TenantProvider({ children }) {
   const refreshGymData = async () => {
     try {
       setLoadingGym(true);
-      let ownerId = 'staff-owner';
+      let ownerId = '';
       let role = 'owner';
       try {
         const storedUser = localStorage.getItem('elite_gym_user');
         if (storedUser) {
           const u = JSON.parse(storedUser);
-          ownerId = u.id || ownerId;
+          ownerId = u.id || '';
           role = u.role || role;
         }
       } catch (e) { }
@@ -90,8 +90,8 @@ export function useTenant() {
   const context = useContext(TenantContext);
   if (!context) {
     return {
-      currentGymId: 'gym-gudiyatham',
-      currentGym: { id: 'gym-gudiyatham', name: 'HealthyHowlz Elite (Gudiyatham HQ)', city: 'Gudiyatham' },
+      currentGymId: '',
+      currentGym: null,
       availableGyms: [],
       loadingGym: false,
       switchGym: () => { },

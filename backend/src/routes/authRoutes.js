@@ -103,8 +103,8 @@ router.post('/login', async (req, res) => {
             phone: staff.phone,
             email: staff.email,
             gym_id: staff.gym_id,
-            gym_name: staff.gym_name || 'HealthyHowlz Facility',
-            gym_city: staff.gym_city || 'Gudiyatham',
+            gym_name: staff.gym_name || (staff.role === 'super_admin' || staff.role === 'platform_admin' ? 'HealthyHowlz HQ' : 'HealthyHowlz Facility'),
+            gym_city: staff.gym_city || '',
             commission_rate: staff.commission_rate,
             base_salary: staff.base_salary
           }
@@ -279,8 +279,8 @@ router.get('/me', async (req, res) => {
         phone: staff.phone,
         email: staff.email,
         gym_id: staff.gym_id,
-        gym_name: staff.gym_name || 'HealthyHowlz Facility',
-        gym_city: staff.gym_city || 'Gudiyatham',
+        gym_name: staff.gym_name || (staff.role === 'super_admin' || staff.role === 'platform_admin' ? 'HealthyHowlz HQ' : 'HealthyHowlz Facility'),
+        gym_city: staff.gym_city || '',
         commission_rate: staff.commission_rate,
         base_salary: staff.base_salary
       }

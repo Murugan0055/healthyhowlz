@@ -8,7 +8,7 @@ const router = express.Router();
 router.get('/accessible', async (req, res) => {
   try {
     const db = await getDb();
-    const ownerId = req.query.ownerId || 'staff-owner'; // Default to Karthik Raja
+    const ownerId = req.query.ownerId || '';
     const role = req.query.role || 'owner';
 
     let gyms;
@@ -61,9 +61,9 @@ router.get('/current', async (req, res) => {
     `, [gymId]);
 
     if (!gym) {
-      // Fallback to default
-      const fallback = await db.get('SELECT * FROM gyms WHERE id = ?', ['gym-gudiyatham']);
-      return res.json(fallback || { id: gymId, name: 'HealthyHowlz Fitness Center', city: 'Gudiyatham' });
+      // Fallback to first available gym if any exist
+      const fallback = await db.get('SELECT * FROM gyms ORDER BY created_at ASC LIMIT 1');
+      return res.json(fallback || null);
     }
 
     res.json(gym);
