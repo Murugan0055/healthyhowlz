@@ -24,6 +24,7 @@ import trainerRoutes from './routes/trainerRoutes.js';
 import platformRoutes from './routes/platformRoutes.js';
 import gymRoutes from './routes/gymRoutes.js';
 import authRoutes from './routes/authRoutes.js';
+import { authenticateToken, enforceGymAuthorization } from './middleware/auth.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -34,6 +35,7 @@ const app = express();
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(authenticateToken); // Auto-decode JWT token on all incoming requests
 
 // Health Check
 app.get('/api/health', (req, res) => {
@@ -45,21 +47,21 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Mount Routes
-app.use('/api/kiosk', kioskRoutes);
-app.use('/api/members', memberRoutes);
+// Mount Routes with Multi-Tenant Gym Authorization
+app.use('/api/kiosk', enforceGymAuthorization, kioskRoutes);
+app.use('/api/members', enforceGymAuthorization, memberRoutes);
 app.use('/api/plans', planRoutes);
-app.use('/api/leads', leadRoutes);
-app.use('/api/revenue', revenueRoutes);
-app.use('/api/expiry', expiryRoutes);
-app.use('/api/invoices', invoiceRoutes);
-app.use('/api/pos', posRoutes);
-app.use('/api/lockers', lockerRoutes);
+app.use('/api/leads', enforceGymAuthorization, leadRoutes);
+app.use('/api/revenue', enforceGymAuthorization, revenueRoutes);
+app.use('/api/expiry', enforceGymAuthorization, expiryRoutes);
+app.use('/api/invoices', enforceGymAuthorization, invoiceRoutes);
+app.use('/api/pos', enforceGymAuthorization, posRoutes);
+app.use('/api/lockers', enforceGymAuthorization, lockerRoutes);
 app.use('/api/staff', staffRoutes);
 app.use('/api/settings', settingRoutes);
 app.use('/api/client', clientRoutes);
-app.use('/api/expenses', expenseRoutes);
-app.use('/api/trainer', trainerRoutes);
+app.use('/api/expenses', enforceGymAuthorization, expenseRoutes);
+app.use('/api/trainer', enforceGymAuthorization, trainerRoutes);
 app.use('/api/platform', platformRoutes);
 app.use('/api/gyms', gymRoutes);
 app.use('/api/auth', authRoutes);

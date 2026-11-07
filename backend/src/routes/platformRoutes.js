@@ -155,15 +155,16 @@ router.post('/gyms', async (req, res) => {
   }
 });
 
-// 4. Update Gym Status (Active / Trial / Suspended)
+// 4. Update Gym Status (Active / Trial / Suspended / Inactive - Soft Deleted)
 router.patch('/gyms/:id/status', async (req, res) => {
   try {
     const db = await getDb();
     const { id } = req.params;
     const { status } = req.body;
 
-    if (!['active', 'trial', 'suspended'].includes(status)) {
-      return res.status(400).json({ error: 'Invalid status' });
+    const allowed = ['active', 'trial', 'suspended', 'inactive'];
+    if (!allowed.includes(status)) {
+      return res.status(400).json({ error: `Invalid status. Must be one of: ${allowed.join(', ')}` });
     }
 
     await db.run('UPDATE gyms SET status = ? WHERE id = ?', [status, id]);
@@ -175,12 +176,28 @@ router.patch('/gyms/:id/status', async (req, res) => {
   }
 });
 
-// 5. Update Gym Plan / Details
+// 5. Update Gym Full Details (Edit Gym)
 router.patch('/gyms/:id', async (req, res) => {
   try {
     const db = await getDb();
     const { id } = req.params;
-    const { name, subscription_tier, monthly_fee, phone, email, address, city, status } = req.body;
+    const {
+      name,
+      slug,
+      owner_name,
+      owner_id,
+      subscription_tier,
+      monthly_fee,
+      phone,
+      email,
+      address,
+      city,
+      state,
+      pincode,
+      gstin,
+      kiosk_pin,
+      status
+    } = req.body;
 
     const existing = await db.get('SELECT * FROM gyms WHERE id = ?', [id]);
     if (!existing) {
@@ -190,22 +207,60 @@ router.patch('/gyms/:id', async (req, res) => {
     await db.run(
       `UPDATE gyms 
        SET name = COALESCE(?, name),
+           slug = COALESCE(?, slug),
+           owner_name = COALESCE(?, owner_name),
+           owner_id = COALESCE(?, owner_id),
            subscription_tier = COALESCE(?, subscription_tier),
            monthly_fee = COALESCE(?, monthly_fee),
            phone = COALESCE(?, phone),
            email = COALESCE(?, email),
            address = COALESCE(?, address),
            city = COALESCE(?, city),
+           state = COALESCE(?, state),
+           pincode = COALESCE(?, pincode),
+           gstin = COALESCE(?, gstin),
+           kiosk_pin = COALESCE(?, kiosk_pin),
            status = COALESCE(?, status)
        WHERE id = ?`,
-      [name, subscription_tier, monthly_fee, phone, email, address, city, status, id]
+      [
+        name ?? null,
+        slug ?? null,
+        owner_name ?? null,
+        owner_id ?? null,
+        subscription_tier ?? null,
+        monthly_fee !== undefined && monthly_fee !== null ? Number(monthly_fee) : null,
+        phone ?? null,
+        email ?? null,
+        address ?? null,
+        city ?? null,
+        state ?? null,
+        pincode ?? null,
+        gstin ?? null,
+        kiosk_pin ?? null,
+        status ?? null,
+        id
+      ]
     );
 
     const updated = await db.get('SELECT * FROM gyms WHERE id = ?', [id]);
     res.json(updated);
   } catch (err) {
     console.error('Error updating gym:', err);
-    res.status(500).json({ error: 'Failed to update gym' });
+    res.status(500).json({ error: 'Failed to update gym: ' + err.message });
+  }
+});
+
+// 6. Soft Delete Gym (Status changed to inactive)
+router.post('/gyms/:id/soft-delete', async (req, res) => {
+  try {
+    const db = await getDb();
+    const { id } = req.params;
+    await db.run("UPDATE gyms SET status = 'inactive' WHERE id = ?", [id]);
+    const updated = await db.get('SELECT * FROM gyms WHERE id = ?', [id]);
+    res.json({ success: true, message: `Gym ${id} has been soft deleted (status set to inactive).`, gym: updated });
+  } catch (err) {
+    console.error('Error soft deleting gym:', err);
+    res.status(500).json({ error: 'Failed to soft delete gym' });
   }
 });
 

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Lock, Phone, ShieldCheck, AlertCircle, ArrowRight, UserCheck, Dumbbell, Building2, HelpCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
-export default function LoginPage() {
+export default function LoginPage({ onSuccess, redirectMessage }) {
   const { login } = useAuth();
   const [identifier, setIdentifier] = useState('');
   const [secret, setSecret] = useState('');
@@ -20,7 +20,10 @@ export default function LoginPage() {
     setLoading(true);
     setError('');
     try {
-      await login(identifier.trim(), secret.trim());
+      const res = await login(identifier.trim(), secret.trim());
+      if (onSuccess && res?.user) {
+        onSuccess(res.user);
+      }
     } catch (err) {
       setError(err.message || 'Invalid credentials. Please verify your phone number / email and PIN / password.');
     } finally {
@@ -69,6 +72,13 @@ export default function LoginPage() {
               <ShieldCheck className="w-4 h-4 text-emerald-400" />
             </div>
           </div>
+
+          {redirectMessage && !error && (
+            <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-start gap-2.5">
+              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-amber-400" />
+              <span className="leading-relaxed">{redirectMessage}</span>
+            </div>
+          )}
 
           {error && (
             <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-start gap-2.5 animate-fadeIn">

@@ -16,11 +16,22 @@ export function TenantProvider({ children }) {
   const [availableGyms, setAvailableGyms] = useState([]);
   const [loadingGym, setLoadingGym] = useState(true);
 
-  // Load accessible gyms and current gym profile
+  // Load accessible gyms based on authenticated user role & ownership
   const refreshGymData = async () => {
     try {
       setLoadingGym(true);
-      const gyms = await api.getAccessibleGyms();
+      let ownerId = 'staff-owner';
+      let role = 'owner';
+      try {
+        const storedUser = localStorage.getItem('elite_gym_user');
+        if (storedUser) {
+          const u = JSON.parse(storedUser);
+          ownerId = u.id || ownerId;
+          role = u.role || role;
+        }
+      } catch (e) {}
+
+      const gyms = await api.getAccessibleGyms(ownerId, role);
       setAvailableGyms(gyms || []);
 
       const current = await api.getCurrentGym();
@@ -40,11 +51,22 @@ export function TenantProvider({ children }) {
     try {
       localStorage.setItem('healthyhowlz_active_gym_id', gymId);
       setCurrentGymId(gymId);
-      // Dispatch event for components that might not be under context
       window.dispatchEvent(new CustomEvent('healthyhowlz:gym-switched', { detail: { gymId } }));
     } catch (e) {
       console.error('Error switching gym:', e);
     }
+  };
+
+  // Resolve gym by slug, id, or alias (e.g. 'gudiyatham' or 'gym-gudiyatham')
+  const findGymByIdOrSlug = (identifier) => {
+    if (!identifier) return null;
+    const clean = identifier.toLowerCase().trim();
+    return availableGyms.find(
+      (g) =>
+        g.slug?.toLowerCase() === clean ||
+        g.id?.toLowerCase() === clean ||
+        g.id?.toLowerCase() === `gym-${clean}`
+    ) || null;
   };
 
   return (
@@ -55,7 +77,8 @@ export function TenantProvider({ children }) {
         availableGyms,
         loadingGym,
         switchGym,
-        refreshGymData
+        refreshGymData,
+        findGymByIdOrSlug
       }}
     >
       {children}
@@ -66,16 +89,15 @@ export function TenantProvider({ children }) {
 export function useTenant() {
   const context = useContext(TenantContext);
   if (!context) {
-    // Fallback if rendered outside provider
     return {
       currentGymId: 'gym-gudiyatham',
       currentGym: { id: 'gym-gudiyatham', name: 'HealthyHowlz Elite (Gudiyatham HQ)', city: 'Gudiyatham' },
       availableGyms: [],
       loadingGym: false,
       switchGym: () => {},
-      refreshGymData: () => {}
+      refreshGymData: () => {},
+      findGymByIdOrSlug: () => null
     };
   }
   return context;
 }
-

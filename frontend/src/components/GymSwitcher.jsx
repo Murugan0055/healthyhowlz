@@ -21,6 +21,10 @@ export default function GymSwitcher({ onNavigatePlatform }) {
   const handleSelectGym = (gymId) => {
     if (gymId !== currentGymId) {
       switchGym(gymId);
+      const targetGym = availableGyms.find(g => g.id === gymId);
+      const nextPath = targetGym ? `/${targetGym.slug || targetGym.id}` : `/${gymId}`;
+      window.history.pushState({}, '', nextPath);
+      window.dispatchEvent(new PopStateEvent('popstate'));
     }
     setIsOpen(false);
   };

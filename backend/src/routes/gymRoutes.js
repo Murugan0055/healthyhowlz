@@ -19,13 +19,22 @@ router.get('/accessible', async (req, res) => {
         FROM gyms g 
         ORDER BY g.created_at ASC
       `);
-    } else {
-      // Owner or staff: fetch gyms owned by this owner
+    } else if (role === 'owner') {
+      // Owner: fetch ONLY gyms owned by this owner
       gyms = await db.all(`
         SELECT g.*, 
           (SELECT COUNT(*) FROM members WHERE gym_id = g.id) as total_members
         FROM gyms g 
-        WHERE g.owner_id = ? OR g.id = 'gym-gudiyatham'
+        WHERE g.owner_id = ?
+        ORDER BY g.created_at ASC
+      `, [ownerId]);
+    } else {
+      // Manager / Admin / Staff: fetch only their assigned facility
+      gyms = await db.all(`
+        SELECT g.*, 
+          (SELECT COUNT(*) FROM members WHERE gym_id = g.id) as total_members
+        FROM gyms g 
+        WHERE g.id = (SELECT gym_id FROM staff WHERE id = ?)
         ORDER BY g.created_at ASC
       `, [ownerId]);
     }

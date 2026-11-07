@@ -8,12 +8,16 @@ export const getActiveGymId = () => {
   }
 };
 
-// Auto-inject x-gym-id tenant header into all API requests
+// Auto-inject x-gym-id tenant header & Authorization token into all API requests
 const originalFetch = window.fetch ? window.fetch.bind(window) : fetch;
 const tenantFetch = (url, options = {}) => {
   const headers = new Headers(options.headers || {});
   if (!headers.has('x-gym-id')) {
     headers.set('x-gym-id', getActiveGymId());
+  }
+  const token = localStorage.getItem('elite_gym_token');
+  if (token && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${token}`);
   }
   return originalFetch(url, { ...options, headers });
 };
@@ -627,6 +631,15 @@ export const api = {
       method: 'DELETE'
     });
     return await res.json();
+  },
+
+  softDeleteGym: async (id) => {
+    const res = await fetch(`${BASE_URL}/platform/gyms/${id}/soft-delete`, {
+      method: 'POST'
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to soft delete gym');
+    return data;
   },
 
   getAccessibleGyms: async (ownerId = 'staff-owner', role = 'owner') => {
