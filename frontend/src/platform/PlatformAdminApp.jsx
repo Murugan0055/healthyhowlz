@@ -137,8 +137,8 @@ export default function PlatformAdminApp({ onLogout, onLaunchGym }) {
   const [vacuumLoading, setVacuumLoading] = useState(false);
   const [exportingGymId, setExportingGymId] = useState(null);
 
-  // Responsive Mobile Collapsible Menu & Navigation
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  // Responsive Side Menu Navigation for All Devices
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const [notification, setNotification] = useState(null);
 
@@ -168,6 +168,7 @@ export default function PlatformAdminApp({ onLogout, onLaunchGym }) {
     loadPlatformData();
     loadKiosksStatus();
     loadTickets();
+    api.getActiveBroadcasts().then(b => setActiveBroadcasts(b || [])).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -657,7 +658,7 @@ Rohan Varma,9840434567,rohan@gmail.com,Male,12,8999,${new Date().toISOString().s
   });
 
   return (
-    <div className="min-h-screen bg-[#070a10] text-slate-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-white">
+    <div className="min-h-screen bg-[#070a10] text-slate-100 flex flex-col md:flex-row font-sans selection:bg-emerald-500 selection:text-white">
       {/* Top Notification Toast */}
       {notification && (
         <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-2 text-xs font-semibold animate-in slide-in-from-top ${
@@ -668,534 +669,627 @@ Rohan Varma,9840434567,rohan@gmail.com,Male,12,8999,${new Date().toISOString().s
         </div>
       )}
 
-      {/* Main SaaS Platform HQ Navbar - Responsive with Mobile Collapsible Menu & Direct Sign Out */}
-      <header className="sticky top-0 z-40 bg-[#0b0f17]/95 backdrop-blur-md border-b border-slate-800/80 px-3.5 sm:px-8 py-3">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2.5 sm:gap-4">
-          {/* Logo & Brand */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-emerald-400 p-0.5 shadow-lg shadow-emerald-500/20 shrink-0">
+      {/* 1. Persistent Left Side Menu (Desktop md: and above) */}
+      <aside className="hidden md:flex w-64 lg:w-72 shrink-0 bg-[#0b0f17] border-r border-slate-800/80 p-4 lg:p-5 flex-col justify-between h-screen sticky top-0 overflow-y-auto z-30">
+        <div className="space-y-6">
+          {/* Brand Header */}
+          <div className="flex items-center gap-3 px-2">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-emerald-400 p-0.5 shadow-lg shadow-emerald-500/20 shrink-0">
               <div className="w-full h-full bg-[#0b0f17] rounded-[14px] flex items-center justify-center">
-                <span className="text-base sm:text-xl">🐺</span>
+                <span className="text-xl">🐺</span>
               </div>
             </div>
             <div>
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                <h1 className="text-xs sm:text-lg font-black tracking-wider text-white">HEALTHYHOWLZ</h1>
-                <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black tracking-wider uppercase bg-purple-500/20 text-purple-300 border border-purple-500/40">
-                  HQ<span className="hidden sm:inline"> COMMAND</span>
+              <div className="flex items-center gap-1.5">
+                <h1 className="text-base font-black tracking-wider text-white">HEALTHYHOWLZ</h1>
+                <span className="px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase bg-purple-500/20 text-purple-300 border border-purple-500/40">
+                  HQ
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400 font-medium hidden sm:block">
-                Multi-Tenant SaaS Central Management Console
-              </p>
+              <p className="text-[11px] text-slate-400 font-medium">SaaS Platform Console</p>
             </div>
           </div>
 
-          {/* Desktop Action Tools (visible on sm: 640px and wider) */}
-          <div className="hidden sm:flex items-center gap-2 sm:gap-3">
+          {/* Group 1: Core Platform Workspace Views */}
+          <div className="space-y-1">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 px-3 mb-2">
+              Platform Workspace
+            </div>
+            <button
+              onClick={() => setActiveTab('facilities')}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-2xl text-xs font-bold transition-all ${
+                activeTab === 'facilities'
+                  ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <Building2 className="w-4 h-4" />
+                <span>Facilities Directory</span>
+              </div>
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                activeTab === 'facilities' ? 'bg-slate-950 text-emerald-400' : 'bg-slate-800 text-slate-400'
+              }`}>
+                {gyms.length}
+              </span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('diagnostics')}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-2xl text-xs font-bold transition-all ${
+                activeTab === 'diagnostics'
+                  ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <Activity className="w-4 h-4" />
+                <span>Kiosk Diagnostics</span>
+              </div>
+              <span className={`w-2 h-2 rounded-full ${
+                kiosks.some(k => k.status === 'offline') ? 'bg-rose-500 animate-pulse' : 'bg-emerald-400'
+              }`} />
+            </button>
+
+            <button
+              onClick={() => setActiveTab('tickets')}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-2xl text-xs font-bold transition-all ${
+                activeTab === 'tickets'
+                  ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <LifeBuoy className="w-4 h-4" />
+                <span>Support Ticket Desk</span>
+              </div>
+              {tickets.filter(t => t.status === 'open').length > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-black bg-rose-500 text-white">
+                  {tickets.filter(t => t.status === 'open').length}
+                </span>
+              )}
+            </button>
+
+            <button
+              onClick={() => setActiveTab('maintenance')}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-2xl text-xs font-bold transition-all ${
+                activeTab === 'maintenance'
+                  ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <Database className="w-4 h-4" />
+                <span>Database & Backups</span>
+              </div>
+              <span className="text-[10px] font-mono text-blue-400 font-semibold">WAL</span>
+            </button>
+          </div>
+
+          {/* Group 2: Management Actions */}
+          <div className="space-y-1">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 px-3 mb-2">
+              Management Actions
+            </div>
+
+            <button
+              onClick={() => setIsProvisionOpen(true)}
+              className="w-full flex items-center justify-between px-3 py-2 rounded-2xl text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800/60 transition-colors group"
+            >
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                </div>
+                <span>Onboard New Gym</span>
+              </div>
+            </button>
+
+            <button
+              onClick={() => handleOpenPaymentModal(null)}
+              className="w-full flex items-center justify-between px-3 py-2 rounded-2xl text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800/60 transition-colors group"
+            >
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <DollarSign className="w-3.5 h-3.5" />
+                </div>
+                <span>Record SaaS Payment</span>
+              </div>
+            </button>
+
+            <button
+              onClick={() => handleOpenImportModal(null)}
+              className="w-full flex items-center justify-between px-3 py-2 rounded-2xl text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800/60 transition-colors group"
+            >
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/30 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <FileSpreadsheet className="w-3.5 h-3.5" />
+                </div>
+                <span>Bulk CSV Importer</span>
+              </div>
+            </button>
+
             <button
               onClick={handleOpenBroadcastModal}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 text-purple-300 border border-purple-500/40 text-xs font-bold transition-all active:scale-95"
-              title="Global Incident Broadcasts & Announcements"
+              className="w-full flex items-center justify-between px-3 py-2 rounded-2xl text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800/60 transition-colors group"
             >
-              <Megaphone className="w-3.5 h-3.5 text-purple-400" />
-              <span>Broadcasts</span>
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/30 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Megaphone className="w-3.5 h-3.5" />
+                </div>
+                <span>Global Broadcasts</span>
+              </div>
+              {activeBroadcasts.length > 0 && (
+                <span className="w-2 h-2 rounded-full bg-purple-400 animate-ping" />
+              )}
             </button>
 
             <button
               onClick={handleOpenAuditLogs}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 text-xs font-bold transition-all active:scale-95"
-              title="Platform Audit Trail (Troubleshooting History)"
+              className="w-full flex items-center justify-between px-3 py-2 rounded-2xl text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800/60 transition-colors group"
             >
-              <History className="w-3.5 h-3.5 text-slate-400" />
-              <span>Audit Trail</span>
-            </button>
-
-            <PwaInstallButton compact={false} variant="navbar" />
-
-            <button
-              onClick={loadPlatformData}
-              className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition-colors"
-              title="Refresh Platform Metrics"
-            >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-emerald-400' : ''}`} />
-            </button>
-
-            {onLogout && (
-              <button
-                onClick={onLogout}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-bold transition-all active:scale-95"
-                title="Sign Out of Platform HQ"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                <span>Sign Out</span>
-              </button>
-            )}
-          </div>
-
-          {/* Mobile Right Action Bar: Direct Sign Out + Collapsible Menu Toggle */}
-          <div className="flex sm:hidden items-center gap-1.5 shrink-0">
-            {onLogout && (
-              <button
-                onClick={onLogout}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 text-xs font-bold transition-transform active:scale-95 shadow-sm shrink-0"
-                title="Sign Out of Platform HQ"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                <span>Sign Out</span>
-              </button>
-            )}
-
-            <button
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className={`p-1.5 rounded-xl border transition-all active:scale-95 shrink-0 ${
-                isMobileMenuOpen
-                  ? 'bg-purple-500 text-white border-purple-400 shadow-md shadow-purple-500/20'
-                  : 'bg-slate-900 text-slate-300 border-slate-800 hover:text-white'
-              }`}
-              title="Toggle Mobile HQ Navigation & Tools Menu"
-            >
-              {isMobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-xl bg-slate-800 text-slate-400 border border-slate-700 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <History className="w-3.5 h-3.5" />
+                </div>
+                <span>Platform Audit Trail</span>
+              </div>
             </button>
           </div>
         </div>
 
-        {/* Mobile Collapsible Navigation Menu Drawer */}
-        {isMobileMenuOpen && (
-          <div className="sm:hidden mt-3 pt-3 border-t border-slate-800/80 animate-in slide-in-from-top-2 duration-200">
-            {/* Admin Profile Strip */}
-            <div className="p-3 rounded-2xl bg-slate-900/90 border border-slate-800 flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-purple-500/20 text-purple-400 border border-purple-500/30 flex items-center justify-center font-black text-xs">
-                  HQ
+        {/* Group 3: Admin Profile & Sign Out Footer */}
+        <div className="pt-4 border-t border-slate-800/80 space-y-3">
+          <div className="p-2.5 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-xl bg-purple-500/20 text-purple-400 border border-purple-500/30 flex items-center justify-center font-black text-xs shrink-0">
+                HQ
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs font-bold text-white truncate flex items-center gap-1.5">
+                  <span>Super Admin</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
                 </div>
-                <div>
-                  <div className="text-xs font-bold text-white flex items-center gap-1.5">
-                    <span>Super Administrator</span>
-                    <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                <p className="text-[10px] text-slate-400 font-mono truncate">9999999999</p>
+              </div>
+            </div>
+            <button
+              onClick={loadPlatformData}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              title="Refresh Platform Metrics"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-emerald-400' : ''}`} />
+            </button>
+          </div>
+
+          {onLogout && (
+            <button
+              onClick={onLogout}
+              className="w-full py-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-bold flex items-center justify-center gap-2 transition-transform active:scale-95 shadow-sm"
+              title="Sign Out of Platform HQ"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>Sign Out</span>
+            </button>
+          )}
+        </div>
+      </aside>
+
+      {/* 2. Mobile Slide-Over Left Side Menu (< md screens) */}
+      {isSidebarOpen && (
+        <div className="fixed inset-0 z-50 md:hidden flex animate-in fade-in duration-200">
+          <div
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm"
+            onClick={() => setIsSidebarOpen(false)}
+          />
+          <aside className="relative w-72 max-w-[85vw] bg-[#0b0f17] border-r border-slate-800 p-4 flex flex-col justify-between h-full z-10 animate-in slide-in-from-left duration-200 overflow-y-auto">
+            <button
+              onClick={() => setIsSidebarOpen(false)}
+              className="absolute top-4 right-4 p-1.5 rounded-full bg-slate-800 text-slate-400 hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <div className="space-y-6">
+              {/* Brand Header */}
+              <div className="flex items-center gap-3 px-2">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-emerald-400 p-0.5 shadow-lg shadow-emerald-500/20 shrink-0">
+                  <div className="w-full h-full bg-[#0b0f17] rounded-[14px] flex items-center justify-center">
+                    <span className="text-xl">🐺</span>
                   </div>
-                  <p className="text-[10px] text-slate-400 font-mono">ID: 9999999999 • All Facilities</p>
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <h1 className="text-base font-black tracking-wider text-white">HEALTHYHOWLZ</h1>
+                    <span className="px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase bg-purple-500/20 text-purple-300 border border-purple-500/40">
+                      HQ
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 font-medium">SaaS Platform Console</p>
                 </div>
               </div>
-            </div>
 
-            {/* Quick HQ Platform Tools Grid */}
-            <div className="grid grid-cols-2 gap-2 mb-3">
-              <button
-                onClick={() => {
-                  handleOpenBroadcastModal();
-                  setIsMobileMenuOpen(false);
-                }}
-                className="p-2.5 rounded-xl bg-purple-950/30 border border-purple-500/30 hover:border-purple-400 text-left flex items-center gap-2 transition-colors"
-              >
-                <Megaphone className="w-4 h-4 text-purple-400 shrink-0" />
-                <div>
-                  <div className="text-xs font-bold text-white">Broadcasts</div>
-                  <div className="text-[10px] text-slate-400">Alert all gyms</div>
+              {/* Group 1: Core Platform Workspace Views */}
+              <div className="space-y-1">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 px-3 mb-2">
+                  Platform Workspace
                 </div>
-              </button>
-
-              <button
-                onClick={() => {
-                  handleOpenAuditLogs();
-                  setIsMobileMenuOpen(false);
-                }}
-                className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 text-left flex items-center gap-2 transition-colors"
-              >
-                <History className="w-4 h-4 text-emerald-400 shrink-0" />
-                <div>
-                  <div className="text-xs font-bold text-white">Audit Trail</div>
-                  <div className="text-[10px] text-slate-400">Security logs</div>
-                </div>
-              </button>
-
-              <button
-                onClick={() => {
-                  setIsProvisionOpen(true);
-                  setIsMobileMenuOpen(false);
-                }}
-                className="p-2.5 rounded-xl bg-emerald-950/30 border border-emerald-500/30 hover:border-emerald-400 text-left flex items-center gap-2 transition-colors"
-              >
-                <Plus className="w-4 h-4 text-emerald-400 shrink-0" />
-                <div>
-                  <div className="text-xs font-bold text-white">Onboard Gym</div>
-                  <div className="text-[10px] text-slate-400">Add branch</div>
-                </div>
-              </button>
-
-              <button
-                onClick={() => {
-                  loadPlatformData();
-                  setIsMobileMenuOpen(false);
-                }}
-                className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 text-left flex items-center gap-2 transition-colors"
-              >
-                <RefreshCw className={`w-4 h-4 text-blue-400 shrink-0 ${loading ? 'animate-spin' : ''}`} />
-                <div>
-                  <div className="text-xs font-bold text-white">Refresh Data</div>
-                  <div className="text-[10px] text-slate-400">Sync metrics</div>
-                </div>
-              </button>
-            </div>
-
-            {/* Quick Workspace Navigation Sections */}
-            <div className="space-y-1 mb-3 pt-2 border-t border-slate-800/60">
-              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-1 mb-1">
-                Workspace Sections
-              </div>
-              <button
-                onClick={() => {
-                  setActiveTab('facilities');
-                  setIsMobileMenuOpen(false);
-                }}
-                className={`w-full p-2.5 rounded-xl text-xs font-bold flex items-center justify-between transition-colors ${
-                  activeTab === 'facilities' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-900/60 text-slate-300 hover:bg-slate-800'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <Building2 className="w-4 h-4" />
-                  <span>Facilities Directory ({gyms.length})</span>
-                </div>
-                <ChevronRight className="w-3.5 h-3.5 opacity-60" />
-              </button>
-
-              <button
-                onClick={() => {
-                  setActiveTab('diagnostics');
-                  setIsMobileMenuOpen(false);
-                }}
-                className={`w-full p-2.5 rounded-xl text-xs font-bold flex items-center justify-between transition-colors ${
-                  activeTab === 'diagnostics' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-900/60 text-slate-300 hover:bg-slate-800'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <Activity className="w-4 h-4" />
-                  <span>Hardware & Kiosk Telemetry</span>
-                </div>
-                <ChevronRight className="w-3.5 h-3.5 opacity-60" />
-              </button>
-
-              <button
-                onClick={() => {
-                  setActiveTab('tickets');
-                  setIsMobileMenuOpen(false);
-                }}
-                className={`w-full p-2.5 rounded-xl text-xs font-bold flex items-center justify-between transition-colors ${
-                  activeTab === 'tickets' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-900/60 text-slate-300 hover:bg-slate-800'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <LifeBuoy className="w-4 h-4" />
-                  <span>Support Ticket Desk</span>
-                </div>
-                {tickets.filter(t => t.status === 'open').length > 0 && (
-                  <span className="px-1.5 py-0.2 rounded-full text-[10px] font-black bg-rose-500 text-white">
-                    {tickets.filter(t => t.status === 'open').length}
+                <button
+                  onClick={() => {
+                    setActiveTab('facilities');
+                    setIsSidebarOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-2xl text-xs font-bold transition-all ${
+                    activeTab === 'facilities'
+                      ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Building2 className="w-4 h-4" />
+                    <span>Facilities Directory</span>
+                  </div>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                    activeTab === 'facilities' ? 'bg-slate-950 text-emerald-400' : 'bg-slate-800 text-slate-400'
+                  }`}>
+                    {gyms.length}
                   </span>
-                )}
-              </button>
+                </button>
 
-              <button
-                onClick={() => {
-                  setActiveTab('maintenance');
-                  setIsMobileMenuOpen(false);
-                }}
-                className={`w-full p-2.5 rounded-xl text-xs font-bold flex items-center justify-between transition-colors ${
-                  activeTab === 'maintenance' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-900/60 text-slate-300 hover:bg-slate-800'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <Database className="w-4 h-4" />
-                  <span>SQLite Telemetry & Cloud Backups</span>
+                <button
+                  onClick={() => {
+                    setActiveTab('diagnostics');
+                    setIsSidebarOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-2xl text-xs font-bold transition-all ${
+                    activeTab === 'diagnostics'
+                      ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Activity className="w-4 h-4" />
+                    <span>Kiosk Diagnostics</span>
+                  </div>
+                  <span className={`w-2 h-2 rounded-full ${
+                    kiosks.some(k => k.status === 'offline') ? 'bg-rose-500 animate-pulse' : 'bg-emerald-400'
+                  }`} />
+                </button>
+
+                <button
+                  onClick={() => {
+                    setActiveTab('tickets');
+                    setIsSidebarOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-2xl text-xs font-bold transition-all ${
+                    activeTab === 'tickets'
+                      ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <LifeBuoy className="w-4 h-4" />
+                    <span>Support Ticket Desk</span>
+                  </div>
+                  {tickets.filter(t => t.status === 'open').length > 0 && (
+                    <span className="px-1.5 py-0.2 rounded-full text-[10px] font-black bg-rose-500 text-white">
+                      {tickets.filter(t => t.status === 'open').length}
+                    </span>
+                  )}
+                </button>
+
+                <button
+                  onClick={() => {
+                    setActiveTab('maintenance');
+                    setIsSidebarOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-2xl text-xs font-bold transition-all ${
+                    activeTab === 'maintenance'
+                      ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Database className="w-4 h-4" />
+                    <span>Database & Backups</span>
+                  </div>
+                  <span className="text-[10px] font-mono text-blue-400 font-semibold">WAL</span>
+                </button>
+              </div>
+
+              {/* Group 2: Management Actions */}
+              <div className="space-y-1">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 px-3 mb-2">
+                  Management Actions
                 </div>
-                <ChevronRight className="w-3.5 h-3.5 opacity-60" />
-              </button>
+
+                <button
+                  onClick={() => {
+                    setIsProvisionOpen(true);
+                    setIsSidebarOpen(false);
+                  }}
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-2xl text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800/60 transition-colors group"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-7 h-7 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                    </div>
+                    <span>Onboard New Gym</span>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => {
+                    handleOpenPaymentModal(null);
+                    setIsSidebarOpen(false);
+                  }}
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-2xl text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800/60 transition-colors group"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-7 h-7 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <DollarSign className="w-3.5 h-3.5" />
+                    </div>
+                    <span>Record SaaS Payment</span>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => {
+                    handleOpenImportModal(null);
+                    setIsSidebarOpen(false);
+                  }}
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-2xl text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800/60 transition-colors group"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-7 h-7 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/30 flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <FileSpreadsheet className="w-3.5 h-3.5" />
+                    </div>
+                    <span>Bulk CSV Importer</span>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => {
+                    handleOpenBroadcastModal();
+                    setIsSidebarOpen(false);
+                  }}
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-2xl text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800/60 transition-colors group"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-7 h-7 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/30 flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <Megaphone className="w-3.5 h-3.5" />
+                    </div>
+                    <span>Global Broadcasts</span>
+                  </div>
+                  {activeBroadcasts.length > 0 && (
+                    <span className="w-2 h-2 rounded-full bg-purple-400 animate-ping" />
+                  )}
+                </button>
+
+                <button
+                  onClick={() => {
+                    handleOpenAuditLogs();
+                    setIsSidebarOpen(false);
+                  }}
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-2xl text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800/60 transition-colors group"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-7 h-7 rounded-xl bg-slate-800 text-slate-400 border border-slate-700 flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <History className="w-3.5 h-3.5" />
+                    </div>
+                    <span>Platform Audit Trail</span>
+                  </div>
+                </button>
+              </div>
             </div>
 
-            {/* Mobile Menu Footer: Large Prominent Sign Out */}
+            {/* Group 3: Admin Profile & Sign Out Footer */}
+            <div className="pt-4 border-t border-slate-800/80 space-y-3">
+              <div className="p-2.5 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-8 h-8 rounded-xl bg-purple-500/20 text-purple-400 border border-purple-500/30 flex items-center justify-center font-black text-xs shrink-0">
+                    HQ
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-bold text-white truncate flex items-center gap-1.5">
+                      <span>Super Admin</span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                    </div>
+                    <p className="text-[10px] text-slate-400 font-mono truncate">9999999999</p>
+                  </div>
+                </div>
+                <button
+                  onClick={loadPlatformData}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                  title="Refresh Platform Metrics"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-emerald-400' : ''}`} />
+                </button>
+              </div>
+
+              {onLogout && (
+                <button
+                  onClick={() => {
+                    setIsSidebarOpen(false);
+                    onLogout();
+                  }}
+                  className="w-full py-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-bold flex items-center justify-center gap-2 transition-transform active:scale-95 shadow-sm"
+                  title="Sign Out of Platform HQ"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Sign Out</span>
+                </button>
+              )}
+            </div>
+          </aside>
+        </div>
+      )}
+
+      {/* 3. Main Workspace Area (Right side) */}
+      <div className="flex-1 flex flex-col min-w-0 min-h-screen">
+        {/* Mobile Top Header (< md screens) */}
+        <header className="md:hidden sticky top-0 z-40 bg-[#0b0f17]/95 backdrop-blur-md border-b border-slate-800/80 px-4 py-3 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5">
+            <button
+              onClick={() => setIsSidebarOpen(true)}
+              className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white active:scale-95 transition-transform"
+              title="Open Navigation Menu"
+            >
+              <Menu className="w-4 h-4" />
+            </button>
+            <div className="flex items-center gap-1.5">
+              <span className="text-base">🐺</span>
+              <span className="text-xs font-black text-white">HEALTHYHOWLZ</span>
+              <span className="px-1.5 py-0.2 rounded-full text-[9px] font-black uppercase bg-purple-500/20 text-purple-300 border border-purple-500/40">HQ</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700 capitalize">
+              {activeTab}
+            </span>
             {onLogout && (
               <button
-                onClick={() => {
-                  setIsMobileMenuOpen(false);
-                  onLogout();
-                }}
-                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-rose-600/30 transition-transform active:scale-95"
+                onClick={onLogout}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 text-xs font-bold transition-transform active:scale-95 shadow-sm"
+                title="Sign Out"
               >
-                <LogOut className="w-4 h-4" />
-                <span>Sign Out of Platform HQ</span>
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Sign Out</span>
               </button>
             )}
           </div>
-        )}
-      </header>
+        </header>
 
-      {/* Main SaaS Platform Workspace */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8 pb-28 md:pb-8">
-        
-        {/* Hero SaaS Metric Cards - Responsive grid */}
-        <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          {/* 1. Total Gyms */}
-          <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-b from-slate-900/90 to-slate-900/40 border border-slate-800 relative overflow-hidden">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] sm:text-xs font-semibold text-slate-400">Total Gym Tenants</span>
-              <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0">
-                <Building2 className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="text-xl sm:text-3xl font-black text-white">
-              {stats?.totalGyms || gyms.length}
-            </div>
-            <div className="mt-2 text-[10px] sm:text-[11px] text-emerald-400 font-medium flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping inline-block" />
-              <span>{stats?.activeGyms || gyms.filter(g => g.status === 'active').length} Active Facilities</span>
-            </div>
-          </div>
-
-          {/* 2. SaaS MRR */}
-          <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-b from-slate-900/90 to-slate-900/40 border border-slate-800 relative overflow-hidden">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] sm:text-xs font-semibold text-slate-400">Platform SaaS MRR</span>
-              <div className="w-8 h-8 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center shrink-0">
-                <TrendingUp className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="text-xl sm:text-3xl font-black text-emerald-400">
-              ₹{(stats?.totalMRR || 15895).toLocaleString('en-IN')}
-            </div>
-            <div className="mt-2 text-[10px] sm:text-[11px] text-slate-400 font-medium">
-              Monthly Subscription Revenue
-            </div>
-          </div>
-
-          {/* 3. Total Members Across Gyms */}
-          <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-b from-slate-900/90 to-slate-900/40 border border-slate-800 relative overflow-hidden">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] sm:text-xs font-semibold text-slate-400">Total Platform Members</span>
-              <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center shrink-0">
-                <Users className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="text-xl sm:text-3xl font-black text-white">
-              {stats?.totalPlatformMembers || 24}+
-            </div>
-            <div className="mt-2 text-[10px] sm:text-[11px] text-blue-400 font-medium">
-              Across all tenant locations
-            </div>
-          </div>
-
-          {/* 4. Multi-Branch Owners */}
-          <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-b from-slate-900/90 to-slate-900/40 border border-slate-800 relative overflow-hidden">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] sm:text-xs font-semibold text-slate-400">SaaS Gym Owners</span>
-              <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center shrink-0">
-                <ShieldCheck className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="text-xl sm:text-3xl font-black text-white">
-              {stats?.totalOwners || 3} Owners
-            </div>
-            <div className="mt-2 text-[10px] sm:text-[11px] text-amber-400 font-medium truncate">
-              Karthik Raja: 3 Gym Branches
-            </div>
-          </div>
-        </section>
-
-        {/* HQ Operational Management Command Bar — 100% Mobile & Desktop Accessible */}
-        <section className="p-3.5 sm:p-4 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-xl space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center shrink-0">
-                <Sliders className="w-3.5 h-3.5" />
-              </div>
-              <div>
-                <h3 className="text-xs font-black text-white tracking-wider flex items-center gap-2">
-                  <span>HQ PLATFORM CONTROLS</span>
-                  <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold">
-                    MOBILE READY
-                  </span>
-                </h3>
-              </div>
-            </div>
-            <span className="text-[10px] text-slate-400 font-medium hidden sm:inline">
-              Urgent Floor Troubleshooting, Broadcasts & Commercial Operations
-            </span>
-          </div>
-
-          {/* 6 Dedicated Quick-Action Touch Cards (2x3 on mobile, 3x2 on tablet, 6-col on desktop) */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-2.5 text-xs">
-            {/* 1. Global Incident Broadcasts */}
-            <button
-              onClick={handleOpenBroadcastModal}
-              className="p-3 rounded-2xl bg-gradient-to-b from-purple-950/40 to-slate-900 border border-purple-500/30 hover:border-purple-500 text-left transition-all active:scale-95 group shadow-sm"
-            >
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-purple-400">Notices</span>
-                <Megaphone className="w-4 h-4 text-purple-400 group-hover:scale-110 transition-transform" />
-              </div>
-              <div className="font-bold text-white text-xs">Broadcasts</div>
-              <p className="text-[10px] text-slate-400 mt-0.5 truncate">Send floor alerts</p>
-            </button>
-
-            {/* 2. Platform Audit Trail */}
-            <button
-              onClick={handleOpenAuditLogs}
-              className="p-3 rounded-2xl bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-700/80 hover:border-slate-500 text-left transition-all active:scale-95 group shadow-sm"
-            >
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Security</span>
-                <History className="w-4 h-4 text-slate-300 group-hover:scale-110 transition-transform" />
-              </div>
-              <div className="font-bold text-white text-xs">Audit Trail</div>
-              <p className="text-[10px] text-slate-400 mt-0.5 truncate">Admin action log</p>
-            </button>
-
-            {/* 3. Record SaaS Offline Payment */}
-            <button
-              onClick={() => handleOpenPaymentModal(null)}
-              className="p-3 rounded-2xl bg-gradient-to-b from-emerald-950/40 to-slate-900 border border-emerald-500/30 hover:border-emerald-500 text-left transition-all active:scale-95 group shadow-sm"
-            >
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">Billing</span>
-                <DollarSign className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform" />
-              </div>
-              <div className="font-bold text-white text-xs">Record Payment</div>
-              <p className="text-[10px] text-slate-400 mt-0.5 truncate">NEFT/UPI & Invoices</p>
-            </button>
-
-            {/* 4. Bulk Member Onboarding Import */}
-            <button
-              onClick={() => handleOpenImportModal(null)}
-              className="p-3 rounded-2xl bg-gradient-to-b from-blue-950/40 to-slate-900 border border-blue-500/30 hover:border-blue-500 text-left transition-all active:scale-95 group shadow-sm"
-            >
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-blue-400">Onboarding</span>
-                <FileSpreadsheet className="w-4 h-4 text-blue-400 group-hover:scale-110 transition-transform" />
-              </div>
-              <div className="font-bold text-white text-xs">Bulk Import</div>
-              <p className="text-[10px] text-slate-400 mt-0.5 truncate">Import CSV members</p>
-            </button>
-
-            {/* 5. Kiosk Diagnostics */}
-            <button
-              onClick={() => setActiveTab('diagnostics')}
-              className={`p-3 rounded-2xl border text-left transition-all active:scale-95 group shadow-sm ${
-                activeTab === 'diagnostics'
-                  ? 'bg-amber-950/40 border-amber-400 ring-1 ring-amber-400/40'
-                  : 'bg-gradient-to-b from-amber-950/30 to-slate-900 border-amber-500/30 hover:border-amber-500'
-              }`}
-            >
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400">Hardware</span>
-                <Activity className="w-4 h-4 text-amber-400 group-hover:scale-110 transition-transform" />
-              </div>
-              <div className="font-bold text-white text-xs">Diagnostics</div>
-              <p className="text-[10px] text-slate-400 mt-0.5 truncate">Camera & Kiosk Pings</p>
-            </button>
-
-            {/* 6. Support Desk */}
-            <button
-              onClick={() => setActiveTab('tickets')}
-              className={`p-3 rounded-2xl border text-left transition-all active:scale-95 group shadow-sm ${
-                activeTab === 'tickets'
-                  ? 'bg-rose-950/40 border-rose-400 ring-1 ring-rose-400/40'
-                  : 'bg-gradient-to-b from-rose-950/30 to-slate-900 border-rose-500/30 hover:border-rose-500'
-              }`}
-            >
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-rose-400">Help Desk</span>
-                <LifeBuoy className="w-4 h-4 text-rose-400 group-hover:scale-110 transition-transform" />
-              </div>
-              <div className="font-bold text-white text-xs flex items-center justify-between">
-                <span>Support Desk</span>
-                {tickets.filter(t => t.status === 'open').length > 0 && (
-                  <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping inline-block" />
-                )}
-              </div>
-              <p className="text-[10px] text-slate-400 mt-0.5 truncate">In-app tickets & disputes</p>
-            </button>
-          </div>
-        </section>
-
-        {/* Multi-Gym Architecture Showcase Banner */}
-        <section className="p-4 sm:p-6 rounded-3xl bg-gradient-to-r from-emerald-950/60 via-slate-900 to-purple-950/40 border border-emerald-500/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
-                MULTI-TENANCY ARCHITECTURE
-              </span>
-              <h2 className="text-sm sm:text-base font-bold text-white">One Gym Owner — Multiple Facility Branches</h2>
-            </div>
-            <p className="text-xs text-slate-300 max-w-2xl">
-              Owner <span className="font-bold text-white">Karthik Raja</span> manages 3 connected facilities: <span className="text-emerald-400 font-bold">Gudiyatham</span> (<code className="text-xs text-slate-200">/gudiyatham</code>), <span className="text-emerald-400 font-bold">Vellore East</span> (<code className="text-xs text-slate-200">/vellore</code>), and <span className="text-emerald-400 font-bold">Chennai Anna Nagar</span> (<code className="text-xs text-slate-200">/chennai</code>).
+        {/* Desktop Top Workspace Header (md: screens and up) */}
+        <header className="hidden md:flex sticky top-0 z-20 bg-[#070a10]/95 backdrop-blur-md border-b border-slate-800/80 px-6 lg:px-8 py-3.5 items-center justify-between">
+          <div>
+            <h2 className="text-base font-bold text-white capitalize">
+              {activeTab === 'facilities' && 'Facilities Directory & Tenants'}
+              {activeTab === 'diagnostics' && 'Front-Desk Kiosk Hardware Diagnostics'}
+              {activeTab === 'tickets' && 'In-App Support Ticket Desk & Floor Disputes'}
+              {activeTab === 'maintenance' && 'SQLite Database Telemetry & Cloud Backups'}
+            </h2>
+            <p className="text-xs text-slate-400">
+              {activeTab === 'facilities' && 'Manage multi-tenant gym branches, subscriptions, and facility access'}
+              {activeTab === 'diagnostics' && 'Monitor camera scanners, device latency, and offline check-in queues'}
+              {activeTab === 'tickets' && 'Review and resolve gym owner escalations, hardware defects, and session disputes'}
+              {activeTab === 'maintenance' && 'Zero-downtime WAL index optimization, integrity checks, and tenant backups'}
             </p>
           </div>
-          <button
-            onClick={() => setIsProvisionOpen(true)}
-            className="w-full sm:w-auto px-5 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 shrink-0 transition-transform active:scale-95"
-          >
-            <Plus className="w-4 h-4 stroke-[3]" />
-            <span>Onboard New Gym</span>
-          </button>
-        </section>
 
-        {/* Phase 3: Platform Workspace Sub-Navigation Tabs */}
-        <section className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none border-b border-slate-800/80">
-          <button
-            onClick={() => setActiveTab('facilities')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold whitespace-nowrap transition-all ${
-              activeTab === 'facilities'
-                ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20'
-                : 'bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800'
-            }`}
-          >
-            <Building2 className="w-4 h-4" />
-            <span>Facilities Directory ({gyms.length})</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('diagnostics')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold whitespace-nowrap transition-all ${
-              activeTab === 'diagnostics'
-                ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20'
-                : 'bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800'
-            }`}
-          >
-            <Activity className="w-4 h-4" />
-            <span>Kiosk Hardware Diagnostics</span>
-            {kiosks.some(k => k.status === 'offline') && (
-              <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+          <div className="flex items-center gap-3">
+            <PwaInstallButton compact={false} variant="navbar" />
+            <button
+              onClick={loadPlatformData}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-semibold transition-colors"
+              title="Refresh Platform Metrics"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-emerald-400' : ''}`} />
+              <span>Sync</span>
+            </button>
+            {onLogout && (
+              <button
+                onClick={onLogout}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-bold transition-transform active:scale-95"
+                title="Sign Out of Platform HQ"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Sign Out</span>
+              </button>
             )}
-          </button>
+          </div>
+        </header>
 
-          <button
-            onClick={() => setActiveTab('tickets')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold whitespace-nowrap transition-all ${
-              activeTab === 'tickets'
-                ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20'
-                : 'bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800'
-            }`}
-          >
-            <LifeBuoy className="w-4 h-4" />
-            <span>Support Ticket Desk</span>
-            {tickets.filter(t => t.status === 'open').length > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full text-[10px] font-black bg-rose-500 text-white">
-                {tickets.filter(t => t.status === 'open').length}
-              </span>
-            )}
-          </button>
+        {/* Main Content Area */}
+        <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+          {/* Hero SaaS Metric Cards */}
+          <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            {/* 1. Total Gyms */}
+            <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-b from-slate-900/90 to-slate-900/40 border border-slate-800 relative overflow-hidden">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] sm:text-xs font-semibold text-slate-400">Total Gym Tenants</span>
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0">
+                  <Building2 className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="text-xl sm:text-3xl font-black text-white">
+                {stats?.totalGyms || gyms.length}
+              </div>
+              <div className="mt-2 text-[10px] sm:text-[11px] text-emerald-400 font-medium flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping inline-block" />
+                <span>{stats?.activeGyms || gyms.filter(g => g.status === 'active').length} Active Facilities</span>
+              </div>
+            </div>
 
-          <button
-            onClick={() => setActiveTab('maintenance')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold whitespace-nowrap transition-all ${
-              activeTab === 'maintenance'
-                ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20'
-                : 'bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800'
-            }`}
-          >
-            <Database className="w-4 h-4" />
-            <span>Database & Cloud Backups</span>
-          </button>
-        </section>
+            {/* 2. SaaS MRR */}
+            <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-b from-slate-900/90 to-slate-900/40 border border-slate-800 relative overflow-hidden">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] sm:text-xs font-semibold text-slate-400">Platform SaaS MRR</span>
+                <div className="w-8 h-8 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center shrink-0">
+                  <TrendingUp className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="text-xl sm:text-3xl font-black text-emerald-400">
+                ₹{(stats?.totalMRR || 15895).toLocaleString('en-IN')}
+              </div>
+              <div className="mt-2 text-[10px] sm:text-[11px] text-slate-400 font-medium">
+                Monthly Subscription Revenue
+              </div>
+            </div>
+
+            {/* 3. Total Members Across Gyms */}
+            <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-b from-slate-900/90 to-slate-900/40 border border-slate-800 relative overflow-hidden">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] sm:text-xs font-semibold text-slate-400">Total Platform Members</span>
+                <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center shrink-0">
+                  <Users className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="text-xl sm:text-3xl font-black text-white">
+                {stats?.totalPlatformMembers || 24}+
+              </div>
+              <div className="mt-2 text-[10px] sm:text-[11px] text-blue-400 font-medium">
+                Across all tenant locations
+              </div>
+            </div>
+
+            {/* 4. Multi-Branch Owners */}
+            <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-b from-slate-900/90 to-slate-900/40 border border-slate-800 relative overflow-hidden">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] sm:text-xs font-semibold text-slate-400">SaaS Gym Owners</span>
+                <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center shrink-0">
+                  <ShieldCheck className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="text-xl sm:text-3xl font-black text-white">
+                {stats?.totalOwners || 3} Owners
+              </div>
+              <div className="mt-2 text-[10px] sm:text-[11px] text-amber-400 font-medium truncate">
+                Karthik Raja: 3 Gym Branches
+              </div>
+            </div>
+          </section>
+
+          {/* Multi-Gym Architecture Showcase Banner */}
+          <section className="p-4 sm:p-6 rounded-3xl bg-gradient-to-r from-emerald-950/60 via-slate-900 to-purple-950/40 border border-emerald-500/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
+                  MULTI-TENANCY ARCHITECTURE
+                </span>
+                <h2 className="text-sm sm:text-base font-bold text-white">One Gym Owner — Multiple Facility Branches</h2>
+              </div>
+              <p className="text-xs text-slate-300 max-w-2xl">
+                Owner <span className="font-bold text-white">Karthik Raja</span> manages 3 connected facilities: <span className="text-emerald-400 font-bold">Gudiyatham</span> (<code className="text-xs text-slate-200">/gudiyatham</code>), <span className="text-emerald-400 font-bold">Vellore East</span> (<code className="text-xs text-slate-200">/vellore</code>), and <span className="text-emerald-400 font-bold">Chennai Anna Nagar</span> (<code className="text-xs text-slate-200">/chennai</code>).
+              </p>
+            </div>
+            <button
+              onClick={() => setIsProvisionOpen(true)}
+              className="w-full sm:w-auto px-5 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 shrink-0 transition-transform active:scale-95"
+            >
+              <Plus className="w-4 h-4 stroke-[3]" />
+              <span>Onboard New Gym</span>
+            </button>
+          </section>
 
         {/* Gym Tenants Directory Section */}
         {activeTab === 'facilities' && (
@@ -3413,101 +3507,10 @@ Rohan Varma,9840434567,rohan@gmail.com,Male,12,8999,${today}`
       )}
 
       {/* Footer Branding */}
-      <footer className="border-t border-slate-800/80 py-5 px-6 text-center text-xs text-slate-500 pb-24 md:pb-5">
+      <footer className="border-t border-slate-800/80 py-5 px-6 text-center text-xs text-slate-500 mt-auto">
         <p>© 2026 HealthyHowlz Fitness OS • Multi-Tenant SaaS Cloud Platform • Powered by SQLite WAL</p>
       </footer>
-
-      {/* Mobile Fixed Bottom Navigation Bar (< md devices) */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#0b0f17]/95 backdrop-blur-lg border-t border-slate-800/90 px-3 py-2 flex items-center justify-around shadow-2xl">
-        {/* 1. Facilities Directory */}
-        <button
-          onClick={() => {
-            setActiveTab('facilities');
-            setIsMobileMenuOpen(false);
-          }}
-          className={`flex flex-col items-center justify-center flex-1 py-1 rounded-xl transition-all active:scale-95 ${
-            activeTab === 'facilities'
-              ? 'text-emerald-400 font-bold'
-              : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          <Building2 className={`w-5 h-5 ${activeTab === 'facilities' ? 'text-emerald-400 scale-110' : 'text-slate-400'}`} />
-          <span className="text-[10px] mt-0.5 tracking-tight font-medium">Gyms</span>
-        </button>
-
-        {/* 2. Kiosk Diagnostics */}
-        <button
-          onClick={() => {
-            setActiveTab('diagnostics');
-            setIsMobileMenuOpen(false);
-          }}
-          className={`flex flex-col items-center justify-center flex-1 py-1 rounded-xl relative transition-all active:scale-95 ${
-            activeTab === 'diagnostics'
-              ? 'text-emerald-400 font-bold'
-              : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          <div className="relative">
-            <Activity className={`w-5 h-5 ${activeTab === 'diagnostics' ? 'text-emerald-400 scale-110' : 'text-slate-400'}`} />
-            {kiosks.some(k => k.status === 'offline' || k.status === 'unstable') && (
-              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-            )}
-          </div>
-          <span className="text-[10px] mt-0.5 tracking-tight font-medium">Kiosks</span>
-        </button>
-
-        {/* 3. Support Tickets Desk */}
-        <button
-          onClick={() => {
-            setActiveTab('tickets');
-            setIsMobileMenuOpen(false);
-          }}
-          className={`flex flex-col items-center justify-center flex-1 py-1 rounded-xl relative transition-all active:scale-95 ${
-            activeTab === 'tickets'
-              ? 'text-emerald-400 font-bold'
-              : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          <div className="relative">
-            <LifeBuoy className={`w-5 h-5 ${activeTab === 'tickets' ? 'text-emerald-400 scale-110' : 'text-slate-400'}`} />
-            {tickets.filter(t => t.status === 'open').length > 0 && (
-              <span className="absolute -top-1 -right-1 px-1 py-0.2 rounded-full bg-rose-500 text-white text-[9px] font-black leading-none">
-                {tickets.filter(t => t.status === 'open').length}
-              </span>
-            )}
-          </div>
-          <span className="text-[10px] mt-0.5 tracking-tight font-medium">Tickets</span>
-        </button>
-
-        {/* 4. Database Maintenance */}
-        <button
-          onClick={() => {
-            setActiveTab('maintenance');
-            setIsMobileMenuOpen(false);
-          }}
-          className={`flex flex-col items-center justify-center flex-1 py-1 rounded-xl transition-all active:scale-95 ${
-            activeTab === 'maintenance'
-              ? 'text-emerald-400 font-bold'
-              : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          <Database className={`w-5 h-5 ${activeTab === 'maintenance' ? 'text-emerald-400 scale-110' : 'text-slate-400'}`} />
-          <span className="text-[10px] mt-0.5 tracking-tight font-medium">Backups</span>
-        </button>
-
-        {/* 5. Mobile Menu & Sign Out Toggle */}
-        <button
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className={`flex flex-col items-center justify-center flex-1 py-1 rounded-xl transition-all active:scale-95 ${
-            isMobileMenuOpen
-              ? 'text-purple-400 font-bold'
-              : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          <Menu className={`w-5 h-5 ${isMobileMenuOpen ? 'text-purple-400 rotate-90 transition-transform' : 'text-slate-400'}`} />
-          <span className="text-[10px] mt-0.5 tracking-tight font-medium">Menu</span>
-        </button>
-      </nav>
     </div>
-  );
+  </div>
+);
 }
