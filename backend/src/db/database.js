@@ -43,7 +43,7 @@ async function initSchema(db) {
       gstin TEXT,
       status TEXT NOT NULL DEFAULT 'active', -- 'active', 'trial', 'suspended'
       subscription_tier TEXT NOT NULL DEFAULT 'pro_growth', -- 'starter', 'pro_growth', 'enterprise'
-      monthly_fee REAL NOT NULL DEFAULT 2499.0,
+      monthly_fee REAL NOT NULL DEFAULT 3000.0,
       billing_cycle TEXT DEFAULT 'monthly',
       valid_until DATE,
       kiosk_pin TEXT DEFAULT '1234',

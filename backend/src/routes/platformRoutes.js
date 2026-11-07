@@ -116,7 +116,7 @@ router.post('/gyms', async (req, res) => {
       pincode,
       gstin,
       subscription_tier = 'pro_growth',
-      monthly_fee = 2499.0,
+      monthly_fee = 3000.0,
       kiosk_pin = '1234',
       status = 'active'
     } = req.body;

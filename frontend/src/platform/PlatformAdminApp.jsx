@@ -6,7 +6,8 @@ import {
   Edit3, Trash2, Archive, Globe, Sparkles, Headphones, KeyRound, Megaphone, History, Radio, ShieldAlert,
   FileSpreadsheet, UploadCloud, CreditCard, Calendar, Clock, Receipt, Download,
   Wifi, WifiOff, HardDrive, Database, LifeBuoy, Ticket, MessageSquare, Zap, Gauge, Terminal, CheckCircle2, Shield, Eye,
-  Menu, ChevronRight, ChevronDown, UserCheck, MoreHorizontal
+  Menu, ChevronRight, ChevronDown, UserCheck, MoreHorizontal,
+  Sun, Moon, Palette
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useTenant } from '../context/TenantContext';
@@ -21,6 +22,20 @@ export default function PlatformAdminApp({ onLogout, onLaunchGym }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
+  // Theme state: 'dark' (Midnight Obsidian), 'light' (Clean Studio), 'cyber' (Tokyo Cyber Neon)
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem('healthyhowlz_hq_theme') || 'dark';
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('healthyhowlz_hq_theme', theme);
+      document.documentElement.setAttribute('data-theme', theme);
+    } catch (e) {
+      console.warn('Failed to persist theme:', e);
+    }
+  }, [theme]);
+
   // Modals state
   const [isProvisionOpen, setIsProvisionOpen] = useState(false);
   const [provisionLoading, setProvisionLoading] = useState(false);
@@ -34,7 +49,7 @@ export default function PlatformAdminApp({ onLogout, onLaunchGym }) {
     email: '',
     gstin: '',
     subscription_tier: 'pro_growth',
-    monthly_fee: 2499,
+    monthly_fee: 3000,
     kiosk_pin: '1234',
     status: 'active'
   });
@@ -56,7 +71,7 @@ export default function PlatformAdminApp({ onLogout, onLaunchGym }) {
     pincode: '',
     gstin: '',
     subscription_tier: 'pro_growth',
-    monthly_fee: 2499,
+    monthly_fee: 3000,
     kiosk_pin: '1234',
     status: 'active'
   });
@@ -233,7 +248,7 @@ export default function PlatformAdminApp({ onLogout, onLaunchGym }) {
       pincode: gym.pincode || '',
       gstin: gym.gstin || '',
       subscription_tier: gym.subscription_tier || 'pro_growth',
-      monthly_fee: gym.monthly_fee || 2499,
+      monthly_fee: gym.monthly_fee || 3000,
       kiosk_pin: gym.kiosk_pin || '1234',
       status: gym.status || 'active'
     });
@@ -282,7 +297,7 @@ export default function PlatformAdminApp({ onLogout, onLaunchGym }) {
         email: '',
         gstin: '',
         subscription_tier: 'pro_growth',
-        monthly_fee: 2499,
+        monthly_fee: 3000,
         kiosk_pin: '1234',
         status: 'active'
       });
@@ -440,7 +455,7 @@ export default function PlatformAdminApp({ onLogout, onLaunchGym }) {
 
     try {
       setPaymentLoading(true);
-      const fee = Number(selectedGymForPayment.monthly_fee) || 2499;
+      const fee = Number(selectedGymForPayment.monthly_fee) || 3000;
       const totalAmount = fee * Number(paymentForm.duration_months);
 
       const res = await api.recordSaasPayment(selectedGymForPayment.id, {
@@ -664,7 +679,236 @@ Rohan Varma,9840434567,rohan@gmail.com,Male,12,8999,${new Date().toISOString().s
   const multiBranchOwners = (owners || []).filter(o => (o.gyms || []).length > 1);
 
   return (
-    <div className="min-h-screen bg-[#070a10] text-slate-100 flex flex-col md:flex-row font-sans selection:bg-emerald-500 selection:text-white">
+    <div
+      data-theme={theme}
+      className={`min-h-screen flex flex-col md:flex-row font-sans hq-root transition-colors duration-200 selection:bg-emerald-500 selection:text-white ${
+        theme === 'light'
+          ? 'bg-slate-100 text-slate-900'
+          : theme === 'cyber'
+          ? 'bg-[#05060f] text-slate-100'
+          : 'bg-[#070a10] text-slate-100'
+      }`}
+    >
+      {/* Scoped Dynamic Theme Styles */}
+      <style>{`
+        /* LIGHT THEME */
+        [data-theme="light"] {
+          color-scheme: light;
+        }
+        [data-theme="light"].hq-root,
+        [data-theme="light"] .hq-root {
+          background-color: #f1f5f9 !important;
+          color: #0f172a !important;
+        }
+        [data-theme="light"] aside,
+        [data-theme="light"] header {
+          background-color: #ffffff !important;
+          border-color: #e2e8f0 !important;
+        }
+        [data-theme="light"] .bg-\\[\\#070a10\\],
+        [data-theme="light"] .bg-\\[\\#0b0f17\\],
+        [data-theme="light"] .bg-\\[\\#07090e\\],
+        [data-theme="light"] .bg-slate-950,
+        [data-theme="light"] .bg-slate-950\\/70,
+        [data-theme="light"] .bg-slate-950\\/80 {
+          background-color: #f8fafc !important;
+          border-color: #e2e8f0 !important;
+        }
+        [data-theme="light"] .bg-slate-900,
+        [data-theme="light"] .bg-\\[\\#0f172a\\],
+        [data-theme="light"] .bg-slate-900\\/90,
+        [data-theme="light"] .bg-slate-900\\/80,
+        [data-theme="light"] .bg-slate-900\\/60,
+        [data-theme="light"] .bg-slate-900\\/50,
+        [data-theme="light"] .bg-slate-900\\/40 {
+          background-color: #ffffff !important;
+          border-color: #e2e8f0 !important;
+          box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+        }
+        [data-theme="light"] .border-slate-800,
+        [data-theme="light"] .border-slate-800\\/80,
+        [data-theme="light"] .border-slate-800\\/60,
+        [data-theme="light"] .border-slate-700 {
+          border-color: #e2e8f0 !important;
+        }
+        [data-theme="light"] .text-white {
+          color: #0f172a !important;
+        }
+        [data-theme="light"] .text-slate-300,
+        [data-theme="light"] .text-slate-200 {
+          color: #334155 !important;
+        }
+        [data-theme="light"] .text-slate-400,
+        [data-theme="light"] .text-slate-500 {
+          color: #64748b !important;
+        }
+        [data-theme="light"] input,
+        [data-theme="light"] select,
+        [data-theme="light"] textarea {
+          background-color: #ffffff !important;
+          color: #0f172a !important;
+          border-color: #cbd5e1 !important;
+        }
+        [data-theme="light"] input::placeholder,
+        [data-theme="light"] textarea::placeholder {
+          color: #94a3b8 !important;
+        }
+        [data-theme="light"] .bg-slate-800,
+        [data-theme="light"] .bg-slate-800\\/60,
+        [data-theme="light"] .bg-slate-800\\/80 {
+          background-color: #f1f5f9 !important;
+          border-color: #e2e8f0 !important;
+          color: #334155 !important;
+        }
+        [data-theme="light"] .hover\\:bg-slate-800\\/60:hover,
+        [data-theme="light"] .hover\\:bg-slate-800:hover,
+        [data-theme="light"] .hover\\:bg-slate-800\\/40:hover {
+          background-color: #f1f5f9 !important;
+          color: #0f172a !important;
+        }
+        [data-theme="light"] table thead tr {
+          background-color: #f8fafc !important;
+          border-color: #e2e8f0 !important;
+        }
+        [data-theme="light"] table tbody tr {
+          border-color: #e2e8f0 !important;
+        }
+        [data-theme="light"] table tbody tr:hover {
+          background-color: #f8fafc !important;
+        }
+        [data-theme="light"] .divide-slate-800 > :not([hidden]) ~ :not([hidden]) {
+          border-color: #e2e8f0 !important;
+        }
+        [data-theme="light"] .hq-theme-switcher {
+          background-color: #f1f5f9 !important;
+          border-color: #cbd5e1 !important;
+        }
+        [data-theme="light"] .hq-metric-cards > div {
+          background-image: none !important;
+          background-color: #ffffff !important;
+          border-color: #e2e8f0 !important;
+          box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05) !important;
+        }
+        [data-theme="light"] .hq-showcase-banner {
+          background-image: linear-gradient(135deg, #f0fdf4 0%, #ffffff 50%, #faf5ff 100%) !important;
+          border-color: #a7f3d0 !important;
+        }
+        [data-theme="light"] .hq-showcase-banner h2 {
+          color: #0f172a !important;
+        }
+        [data-theme="light"] .hq-showcase-banner p {
+          color: #334155 !important;
+        }
+        [data-theme="light"] .hq-showcase-banner code {
+          background-color: rgba(15, 23, 42, 0.06) !important;
+          color: #0f172a !important;
+        }
+        [data-theme="light"] .hq-tier-card-pro {
+          background-image: linear-gradient(180deg, #ecfdf5 0%, #ffffff 100%) !important;
+          border-color: #10b981 !important;
+        }
+
+        /* CYBER THEME (Tokyo Night Neon / Cyberpunk Obsidian) */
+        [data-theme="cyber"] {
+          color-scheme: dark;
+        }
+        [data-theme="cyber"].hq-root,
+        [data-theme="cyber"] .hq-root {
+          background-color: #05060f !important;
+          background-image: radial-gradient(circle at 50% 0%, rgba(6, 182, 212, 0.08) 0%, transparent 60%), radial-gradient(circle at 90% 80%, rgba(168, 85, 247, 0.06) 0%, transparent 50%) !important;
+          color: #f1f5f9 !important;
+        }
+        [data-theme="cyber"] aside,
+        [data-theme="cyber"] header {
+          background-color: #080c1e !important;
+          border-color: rgba(6, 182, 212, 0.25) !important;
+        }
+        [data-theme="cyber"] .bg-\\[\\#070a10\\],
+        [data-theme="cyber"] .bg-\\[\\#0b0f17\\],
+        [data-theme="cyber"] .bg-\\[\\#07090e\\],
+        [data-theme="cyber"] .bg-slate-950,
+        [data-theme="cyber"] .bg-slate-950\\/70,
+        [data-theme="cyber"] .bg-slate-950\\/80 {
+          background-color: #060917 !important;
+          border-color: rgba(6, 182, 212, 0.2) !important;
+        }
+        [data-theme="cyber"] .bg-slate-900,
+        [data-theme="cyber"] .bg-\\[\\#0f172a\\],
+        [data-theme="cyber"] .bg-slate-900\\/90,
+        [data-theme="cyber"] .bg-slate-900\\/80,
+        [data-theme="cyber"] .bg-slate-900\\/60,
+        [data-theme="cyber"] .bg-slate-900\\/50,
+        [data-theme="cyber"] .bg-slate-900\\/40 {
+          background-color: #0c1228 !important;
+          border-color: rgba(6, 182, 212, 0.3) !important;
+          box-shadow: 0 0 15px rgba(6, 182, 212, 0.05);
+        }
+        [data-theme="cyber"] .border-slate-800,
+        [data-theme="cyber"] .border-slate-800\\/80,
+        [data-theme="cyber"] .border-slate-800\\/60,
+        [data-theme="cyber"] .border-slate-700 {
+          border-color: rgba(6, 182, 212, 0.25) !important;
+        }
+        [data-theme="cyber"] input,
+        [data-theme="cyber"] select,
+        [data-theme="cyber"] textarea {
+          background-color: #080d21 !important;
+          border-color: rgba(6, 182, 212, 0.4) !important;
+          color: #ffffff !important;
+        }
+        [data-theme="cyber"] input:focus,
+        [data-theme="cyber"] select:focus,
+        [data-theme="cyber"] textarea:focus {
+          border-color: #00f5d4 !important;
+          box-shadow: 0 0 10px rgba(0, 245, 212, 0.3) !important;
+        }
+        [data-theme="cyber"] .text-emerald-400 {
+          color: #00f5d4 !important;
+          text-shadow: 0 0 8px rgba(0, 245, 212, 0.3);
+        }
+        [data-theme="cyber"] .bg-emerald-500 {
+          background: linear-gradient(135deg, #00f5d4 0%, #06b6d4 100%) !important;
+          color: #030712 !important;
+          box-shadow: 0 0 16px rgba(0, 245, 212, 0.3) !important;
+        }
+        [data-theme="cyber"] .bg-emerald-500\\/10,
+        [data-theme="cyber"] .bg-emerald-500\\/20 {
+          background-color: rgba(0, 245, 212, 0.12) !important;
+          border-color: rgba(0, 245, 212, 0.3) !important;
+        }
+        [data-theme="cyber"] .border-emerald-500\\/30,
+        [data-theme="cyber"] .border-emerald-500\\/40,
+        [data-theme="cyber"] .border-emerald-500\\/50,
+        [data-theme="cyber"] .border-emerald-500\\/60 {
+          border-color: rgba(0, 245, 212, 0.45) !important;
+        }
+        [data-theme="cyber"] .text-purple-400 {
+          color: #c084fc !important;
+          text-shadow: 0 0 8px rgba(192, 132, 252, 0.3);
+        }
+        [data-theme="cyber"] table tbody tr:hover {
+          background-color: rgba(6, 182, 212, 0.08) !important;
+        }
+        [data-theme="cyber"] .hq-theme-switcher {
+          background-color: #080d21 !important;
+          border-color: rgba(6, 182, 212, 0.3) !important;
+        }
+        [data-theme="cyber"] .hq-metric-cards > div {
+          background-image: linear-gradient(180deg, rgba(14, 22, 48, 0.9) 0%, rgba(10, 16, 36, 0.6) 100%) !important;
+          border-color: rgba(6, 182, 212, 0.3) !important;
+          box-shadow: 0 0 15px rgba(6, 182, 212, 0.06) !important;
+        }
+        [data-theme="cyber"] .hq-showcase-banner {
+          background-image: linear-gradient(135deg, rgba(6, 182, 212, 0.15) 0%, rgba(12, 18, 40, 0.9) 50%, rgba(168, 85, 247, 0.15) 100%) !important;
+          border-color: rgba(6, 182, 212, 0.4) !important;
+          box-shadow: 0 0 20px rgba(6, 182, 212, 0.08) !important;
+        }
+        [data-theme="cyber"] .hq-tier-card-pro {
+          background-image: linear-gradient(180deg, rgba(6, 182, 212, 0.15) 0%, rgba(11, 17, 38, 0.95) 100%) !important;
+          border-color: #00f5d4 !important;
+          box-shadow: 0 0 25px rgba(0, 245, 212, 0.15) !important;
+        }
+      `}</style>
       {/* Top Notification Toast */}
       {notification && (
         <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-2 text-xs font-semibold animate-in slide-in-from-top ${
@@ -839,6 +1083,58 @@ Rohan Varma,9840434567,rohan@gmail.com,Male,12,8999,${new Date().toISOString().s
                 </div>
                 <span>Platform Audit Trail</span>
               </div>
+            </button>
+          </div>
+        </div>
+
+        {/* Theme / Appearance Selector in Desktop Sidebar */}
+        <div className="pt-3 border-t border-slate-800/80 space-y-2">
+          <div className="flex items-center justify-between px-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            <span className="flex items-center gap-1.5">
+              <Palette className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Theme</span>
+            </span>
+            <span className="text-[10px] font-semibold text-slate-400 capitalize">{theme}</span>
+          </div>
+          <div className="grid grid-cols-3 gap-1 bg-slate-900/90 p-1 rounded-2xl border border-slate-800 hq-theme-switcher">
+            <button
+              type="button"
+              onClick={() => setTheme('dark')}
+              className={`py-1.5 px-2 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all ${
+                theme === 'dark'
+                  ? 'bg-emerald-500 text-slate-950 shadow-md font-black'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              }`}
+              title="Midnight Obsidian Dark Theme"
+            >
+              <Moon className="w-3.5 h-3.5 shrink-0" />
+              <span>Dark</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setTheme('light')}
+              className={`py-1.5 px-2 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all ${
+                theme === 'light'
+                  ? 'bg-emerald-500 text-slate-950 shadow-md font-black'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              }`}
+              title="Clean Studio Light Theme"
+            >
+              <Sun className="w-3.5 h-3.5 shrink-0" />
+              <span>Light</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setTheme('cyber')}
+              className={`py-1.5 px-2 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all ${
+                theme === 'cyber'
+                  ? 'bg-gradient-to-r from-cyan-400 to-fuchsia-500 text-slate-950 shadow-md font-black'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              }`}
+              title="Tokyo Cyber Neon Theme"
+            >
+              <Sparkles className="w-3.5 h-3.5 shrink-0" />
+              <span>Cyber</span>
             </button>
           </div>
         </div>
@@ -1087,6 +1383,58 @@ Rohan Varma,9840434567,rohan@gmail.com,Male,12,8999,${new Date().toISOString().s
               </div>
             </div>
 
+            {/* Theme / Appearance Selector in Mobile Drawer */}
+            <div className="pt-3 border-t border-slate-800/80 space-y-2">
+              <div className="flex items-center justify-between px-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                <span className="flex items-center gap-1.5">
+                  <Palette className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Theme</span>
+                </span>
+                <span className="text-[10px] font-semibold text-slate-400 capitalize">{theme}</span>
+              </div>
+              <div className="grid grid-cols-3 gap-1 bg-slate-900/90 p-1 rounded-2xl border border-slate-800 hq-theme-switcher">
+                <button
+                  type="button"
+                  onClick={() => setTheme('dark')}
+                  className={`py-1.5 px-2 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all ${
+                    theme === 'dark'
+                      ? 'bg-emerald-500 text-slate-950 shadow-md font-black'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                  }`}
+                  title="Midnight Obsidian Dark Theme"
+                >
+                  <Moon className="w-3.5 h-3.5 shrink-0" />
+                  <span>Dark</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTheme('light')}
+                  className={`py-1.5 px-2 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all ${
+                    theme === 'light'
+                      ? 'bg-emerald-500 text-slate-950 shadow-md font-black'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                  }`}
+                  title="Clean Studio Light Theme"
+                >
+                  <Sun className="w-3.5 h-3.5 shrink-0" />
+                  <span>Light</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTheme('cyber')}
+                  className={`py-1.5 px-2 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all ${
+                    theme === 'cyber'
+                      ? 'bg-gradient-to-r from-cyan-400 to-fuchsia-500 text-slate-950 shadow-md font-black'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                  }`}
+                  title="Tokyo Cyber Neon Theme"
+                >
+                  <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                  <span>Cyber</span>
+                </button>
+              </div>
+            </div>
+
             {/* Group 3: Admin Profile & Sign Out Footer */}
             <div className="pt-4 border-t border-slate-800/80 space-y-3">
               <div className="p-2.5 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between">
@@ -1149,6 +1497,17 @@ Rohan Varma,9840434567,rohan@gmail.com,Male,12,8999,${new Date().toISOString().s
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Mobile Quick Theme Switcher */}
+            <button
+              type="button"
+              onClick={() => setTheme(t => t === 'dark' ? 'light' : t === 'light' ? 'cyber' : 'dark')}
+              className="p-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white flex items-center justify-center transition-colors"
+              title={`Toggle Theme (Current: ${theme})`}
+            >
+              {theme === 'dark' && <Moon className="w-3.5 h-3.5 text-emerald-400" />}
+              {theme === 'light' && <Sun className="w-3.5 h-3.5 text-amber-500" />}
+              {theme === 'cyber' && <Sparkles className="w-3.5 h-3.5 text-cyan-400" />}
+            </button>
             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700 capitalize">
               {activeTab}
             </span>
@@ -1182,7 +1541,44 @@ Rohan Varma,9840434567,rohan@gmail.com,Male,12,8999,${new Date().toISOString().s
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
+            {/* Desktop Theme Switcher Pill */}
+            <div className="flex items-center bg-slate-900 border border-slate-800 rounded-xl p-0.5 text-xs hq-theme-switcher">
+              <button
+                type="button"
+                onClick={() => setTheme('dark')}
+                className={`px-2 py-1 rounded-lg flex items-center gap-1 transition-all ${
+                  theme === 'dark' ? 'bg-emerald-500 text-slate-950 font-bold shadow-sm' : 'text-slate-400 hover:text-white'
+                }`}
+                title="Midnight Dark"
+              >
+                <Moon className="w-3 h-3" />
+                <span className="hidden xl:inline text-[11px]">Dark</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setTheme('light')}
+                className={`px-2 py-1 rounded-lg flex items-center gap-1 transition-all ${
+                  theme === 'light' ? 'bg-emerald-500 text-slate-950 font-bold shadow-sm' : 'text-slate-400 hover:text-white'
+                }`}
+                title="Studio Light"
+              >
+                <Sun className="w-3 h-3" />
+                <span className="hidden xl:inline text-[11px]">Light</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setTheme('cyber')}
+                className={`px-2 py-1 rounded-lg flex items-center gap-1 transition-all ${
+                  theme === 'cyber' ? 'bg-gradient-to-r from-cyan-400 to-fuchsia-500 text-slate-950 font-bold shadow-sm' : 'text-slate-400 hover:text-white'
+                }`}
+                title="Tokyo Cyber Neon"
+              >
+                <Sparkles className="w-3 h-3" />
+                <span className="hidden xl:inline text-[11px]">Cyber</span>
+              </button>
+            </div>
+
             <PwaInstallButton compact={false} variant="navbar" />
             <button
               onClick={loadPlatformData}
@@ -1207,8 +1603,10 @@ Rohan Varma,9840434567,rohan@gmail.com,Male,12,8999,${new Date().toISOString().s
 
         {/* Main Content Area */}
         <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
-          {/* Hero SaaS Metric Cards */}
-          <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          {activeTab === 'facilities' && (
+            <>
+              {/* Hero SaaS Metric Cards */}
+              <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 hq-metric-cards">
             {/* 1. Total Gyms */}
             <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-b from-slate-900/90 to-slate-900/40 border border-slate-800 relative overflow-hidden">
               <div className="flex items-center justify-between mb-2">
@@ -1280,7 +1678,7 @@ Rohan Varma,9840434567,rohan@gmail.com,Male,12,8999,${new Date().toISOString().s
           </section>
 
           {/* Multi-Gym Architecture Showcase Banner */}
-          <section className="p-4 sm:p-6 rounded-3xl bg-gradient-to-r from-emerald-950/60 via-slate-900 to-purple-950/40 border border-emerald-500/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <section className="p-4 sm:p-6 rounded-3xl bg-gradient-to-r from-emerald-950/60 via-slate-900 to-purple-950/40 border border-emerald-500/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 hq-showcase-banner">
             <div className="space-y-1">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
@@ -1313,9 +1711,8 @@ Rohan Varma,9840434567,rohan@gmail.com,Male,12,8999,${new Date().toISOString().s
             </button>
           </section>
 
-        {/* Gym Tenants Directory Section */}
-        {activeTab === 'facilities' && (
-        <section className="space-y-4">
+          {/* Gym Tenants Directory Section */}
+          <section className="space-y-4">
           {/* Controls Bar: Search & Status Filters */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
             <div className="relative flex-1 max-w-md">
@@ -1770,6 +2167,260 @@ Rohan Varma,9840434567,rohan@gmail.com,Male,12,8999,${new Date().toISOString().s
           </div>
 
         </section>
+
+        {/* SaaS Subscription Plans Matrix */}
+        <section className="space-y-4 pt-6 border-t border-slate-800/80">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400 border border-purple-500/30">
+                  SAAS PRICING MATRIX
+                </span>
+                <h3 className="text-base font-bold text-white">HealthyHowlz SaaS Subscription Tiers</h3>
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5">Flexible monthly tiers tailored for independent gyms, high-volume clubs, and fitness chains (₹1,000 – ₹6,000/mo)</p>
+            </div>
+            <div className="text-[11px] text-slate-400 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />
+              <span>All plans include 99.9% uptime SLA & daily WAL backups</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {/* 1. Starter Tier (₹1,000 /mo) */}
+            <div className="p-6 rounded-3xl bg-slate-900 border border-slate-800 space-y-4 flex flex-col justify-between relative overflow-hidden group hover:border-slate-700 transition-all">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black uppercase tracking-wider text-blue-400 px-2.5 py-1 rounded-full bg-blue-500/10 border border-blue-500/20">
+                    Starter Tier
+                  </span>
+                  <span className="text-xs font-mono font-bold text-slate-400">1 Facility</span>
+                </div>
+                <div>
+                  <div className="text-3xl font-black text-white flex items-baseline gap-1">
+                    ₹1,000
+                    <span className="text-xs font-medium text-slate-400">/mo</span>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-1">For single location gyms starting up & boutique fitness studios</p>
+                </div>
+                <div className="border-t border-slate-800 pt-4 space-y-2.5">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Core Features</div>
+                  <ul className="space-y-2 text-xs text-slate-300">
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <span><strong>Up to 150</strong> active members</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <span>Single dedicated tenant slug (<code>/yourgym</code>)</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <span>Front-desk reception QR kiosk scanner</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <span>Progressive Web App (PWA) for members</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <span>Manual & QR rapid check-in ledger</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <span>Membership plans & auto-expiry alerts</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <span>Membership freeze & pause policies</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <span>Master reception PIN override & audit log</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <span>Peak traffic footfall & rush hours analytics</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <span>Standard email support (24–48h SLA)</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+              <div className="pt-4 border-t border-slate-800/80">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNewGymData(prev => ({ ...prev, subscription_tier: 'starter', monthly_fee: 1000 }));
+                    setIsProvisionOpen(true);
+                  }}
+                  className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-bold transition-all text-center"
+                >
+                  Provision on Starter
+                </button>
+              </div>
+            </div>
+
+            {/* 2. Pro Growth Tier (₹3,000 /mo) - Most Popular */}
+            <div className="p-6 rounded-3xl bg-gradient-to-b from-emerald-950/40 via-slate-900 to-slate-900 border-2 border-emerald-500/60 space-y-4 flex flex-col justify-between relative shadow-xl shadow-emerald-950/30 hq-tier-card-pro">
+              <div className="absolute -top-3 right-6 px-3 py-1 rounded-full bg-emerald-500 text-slate-950 font-black text-[10px] uppercase tracking-wider shadow-md shadow-emerald-500/30 flex items-center gap-1">
+                <Sparkles className="w-3 h-3" />
+                <span>MOST POPULAR</span>
+              </div>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black uppercase tracking-wider text-emerald-400 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30">
+                    Pro Growth Tier
+                  </span>
+                  <span className="text-xs font-mono font-bold text-slate-400">Multi-Coach</span>
+                </div>
+                <div>
+                  <div className="text-3xl font-black text-emerald-400 flex items-baseline gap-1">
+                    ₹3,000
+                    <span className="text-xs font-medium text-slate-400">/mo</span>
+                  </div>
+                  <p className="text-xs text-slate-300 mt-1">High-volume strength clubs, functional fitness & performance centers</p>
+                </div>
+                <div className="border-t border-slate-800 pt-4 space-y-2.5">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">Everything in Starter, Plus:</div>
+                  <ul className="space-y-2 text-xs text-slate-200">
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <span><strong>Unlimited</strong> active gym members</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <span>App 3 Trainer Roster & coach logins</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <span>Anti-fraud PT PIN verification & counters</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <span>Trainer commission payouts & payroll tracking</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <span>Floor check-in posture & biometric security</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <span>POS retail nutrition & supplement bar ledger</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <span>Operating expenses, utilities & real-time P&L</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <span>Prospect lead inquiry & sales CRM pipeline</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <span>Member anti-sharing device binding security</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <span>Priority WhatsApp & phone support (Same-day)</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+              <div className="pt-4 border-t border-slate-800/80">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNewGymData(prev => ({ ...prev, subscription_tier: 'pro_growth', monthly_fee: 3000 }));
+                    setIsProvisionOpen(true);
+                  }}
+                  className="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black transition-all text-center shadow-lg shadow-emerald-500/20 active:scale-95"
+                >
+                  Provision on Pro Growth
+                </button>
+              </div>
+            </div>
+
+            {/* 3. Enterprise Chain Tier (₹6,000 /mo) */}
+            <div className="p-6 rounded-3xl bg-slate-900 border border-slate-800 space-y-4 flex flex-col justify-between relative overflow-hidden group hover:border-purple-500/40 transition-all">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black uppercase tracking-wider text-purple-400 px-2.5 py-1 rounded-full bg-purple-500/10 border border-purple-500/30">
+                    Enterprise Chain
+                  </span>
+                  <span className="text-xs font-mono font-bold text-slate-400">Unlimited Multi-Gym</span>
+                </div>
+                <div>
+                  <div className="text-3xl font-black text-white flex items-baseline gap-1">
+                    ₹6,000
+                    <span className="text-xs font-medium text-slate-400">/mo</span>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-1">Multi-branch fitness chains, franchise networks & health clubs</p>
+                </div>
+                <div className="border-t border-slate-800 pt-4 space-y-2.5">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-purple-400">Everything in Pro Growth, Plus:</div>
+                  <ul className="space-y-2 text-xs text-slate-300">
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
+                      <span><strong>Multi-Facility</strong> branch switcher in App & HQ</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
+                      <span>Cross-gym member check-in roaming across branches</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
+                      <span>Consolidated HQ profit & loss ledger & analytics</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
+                      <span>B2B corporate tax invoicing & automated GST credit</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
+                      <span>Kiosk hardware diagnostics & real-time telemetry</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
+                      <span>Zero-downtime WAL backups & JSON full-state export</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
+                      <span>Global tenant incident broadcast banner alerts</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
+                      <span>In-app helpdesk ticket resolution & dispute desk</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
+                      <span>Bulk CSV member data import & sync tool</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
+                      <span>Dedicated 24/7 account manager & custom webhook API</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+              <div className="pt-4 border-t border-slate-800/80">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNewGymData(prev => ({ ...prev, subscription_tier: 'enterprise', monthly_fee: 6000 }));
+                    setIsProvisionOpen(true);
+                  }}
+                  className="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-black transition-all text-center shadow-lg shadow-purple-600/20 active:scale-95"
+                >
+                  Provision on Enterprise
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+        </>
         )}
 
         {/* Phase 3 View 1: Kiosk Hardware Telemetry & Diagnostics */}
@@ -2243,99 +2894,6 @@ Rohan Varma,9840434567,rohan@gmail.com,Male,12,8999,${new Date().toISOString().s
             </div>
           </section>
         )}
-
-        {/* SaaS Subscription Plans Matrix */}
-        <section className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-base font-bold text-white">HealthyHowlz SaaS Subscription Tiers</h3>
-              <p className="text-xs text-slate-400">Available billing plans for new gym tenants</p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* 1. Starter Tier */}
-            <div className="p-5 sm:p-6 rounded-3xl bg-slate-900 border border-slate-800 space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-blue-400">Starter Tier</span>
-                <span className="text-xs font-mono text-slate-400">1 Facility</span>
-              </div>
-              <div>
-                <div className="text-2xl font-black text-white">₹899 <span className="text-xs font-normal text-slate-400">/mo</span></div>
-                <p className="text-xs text-slate-400 mt-1">For single location gyms starting up</p>
-              </div>
-              <ul className="space-y-2 text-xs text-slate-300 border-t border-slate-800 pt-4">
-                <li className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span>Up to 150 members</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span>Reception QR Kiosk Scanner</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span>Basic Member PWA App</span>
-                </li>
-              </ul>
-            </div>
-
-            {/* 2. Pro Growth Tier (Most Popular) */}
-            <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-b from-emerald-950/40 to-slate-900 border-2 border-emerald-500/50 space-y-4 relative">
-              <div className="absolute -top-3 right-6 px-2.5 py-0.5 rounded-full bg-emerald-500 text-slate-950 font-black text-[10px] uppercase tracking-wider">
-                MOST POPULAR
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">Pro Growth Tier</span>
-                <span className="text-xs font-mono text-slate-400">Multi-Coach</span>
-              </div>
-              <div>
-                <div className="text-2xl font-black text-emerald-400">₹2,499 <span className="text-xs font-normal text-slate-400">/mo</span></div>
-                <p className="text-xs text-slate-400 mt-1">High-volume clubs & performance centers</p>
-              </div>
-              <ul className="space-y-2 text-xs text-slate-300 border-t border-slate-800 pt-4">
-                <li className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span>Unlimited active members</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span>Trainer App 3 & Anti-Fraud PT PIN</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span>POS Retail & Owner Expenses P&L</span>
-                </li>
-              </ul>
-            </div>
-
-            {/* 3. Enterprise Tier */}
-            <div className="p-5 sm:p-6 rounded-3xl bg-slate-900 border border-slate-800 space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-purple-400">Enterprise Chain</span>
-                <span className="text-xs font-mono text-slate-400">Unlimited Multi-Gym</span>
-              </div>
-              <div>
-                <div className="text-2xl font-black text-white">₹4,999 <span className="text-xs font-normal text-slate-400">/mo</span></div>
-                <p className="text-xs text-slate-400 mt-1">Gym chains with multi-branch cross access</p>
-              </div>
-              <ul className="space-y-2 text-xs text-slate-300 border-t border-slate-800 pt-4">
-                <li className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-purple-400 shrink-0" />
-                  <span>Multi-Facility Branch Switcher</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-purple-400 shrink-0" />
-                  <span>Cross-gym member check-in roaming</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-purple-400 shrink-0" />
-                  <span>Consolidated HQ profit & loss analytics</span>
-                </li>
-              </ul>
-            </div>
-          </div>
-        </section>
       </main>
 
       {/* EDIT GYM MODAL */}
@@ -2441,12 +2999,16 @@ Rohan Varma,9840434567,rohan@gmail.com,Male,12,8999,${new Date().toISOString().s
                   <label className="block text-slate-400 font-semibold mb-1">Plan Tier</label>
                   <select
                     value={editFormData.subscription_tier}
-                    onChange={(e) => setEditFormData({ ...editFormData, subscription_tier: e.target.value })}
+                    onChange={(e) => {
+                      const tier = e.target.value;
+                      const fee = tier === 'starter' ? 1000 : tier === 'enterprise' ? 6000 : 3000;
+                      setEditFormData({ ...editFormData, subscription_tier: tier, monthly_fee: fee });
+                    }}
                     className="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
                   >
-                    <option value="starter">Starter</option>
-                    <option value="pro_growth">Pro Growth</option>
-                    <option value="enterprise">Enterprise</option>
+                    <option value="starter">Starter (₹1,000/mo)</option>
+                    <option value="pro_growth">Pro Growth (₹3,000/mo)</option>
+                    <option value="enterprise">Enterprise (₹6,000/mo)</option>
                   </select>
                 </div>
                 <div>
@@ -2604,14 +3166,14 @@ Rohan Varma,9840434567,rohan@gmail.com,Male,12,8999,${new Date().toISOString().s
                     value={newGymData.subscription_tier}
                     onChange={(e) => {
                       const tier = e.target.value;
-                      const fee = tier === 'starter' ? 899 : tier === 'enterprise' ? 4999 : 2499;
+                      const fee = tier === 'starter' ? 1000 : tier === 'enterprise' ? 6000 : 3000;
                       setNewGymData({ ...newGymData, subscription_tier: tier, monthly_fee: fee });
                     }}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
                   >
-                    <option value="starter">Starter (₹899/mo)</option>
-                    <option value="pro_growth">Pro Growth (₹2,499/mo)</option>
-                    <option value="enterprise">Enterprise (₹4,999/mo)</option>
+                    <option value="starter">Starter (₹1,000/mo)</option>
+                    <option value="pro_growth">Pro Growth (₹3,000/mo)</option>
+                    <option value="enterprise">Enterprise (₹6,000/mo)</option>
                   </select>
                 </div>
                 <div>
