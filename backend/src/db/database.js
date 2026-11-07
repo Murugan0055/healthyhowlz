@@ -423,9 +423,34 @@ async function initSchema(db) {
       expires_at DATETIME,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+
+    -- Phase 2: SaaS Subscriptions & B2B GST Invoices for Gym Tenants
+    CREATE TABLE IF NOT EXISTS saas_invoices (
+      id TEXT PRIMARY KEY,
+      gym_id TEXT NOT NULL,
+      gym_name TEXT NOT NULL,
+      owner_id TEXT NOT NULL,
+      owner_name TEXT NOT NULL,
+      invoice_number TEXT UNIQUE NOT NULL,
+      amount_base REAL NOT NULL,
+      gst_rate REAL DEFAULT 18.0,
+      gst_amount REAL NOT NULL,
+      total_amount REAL NOT NULL,
+      payment_mode TEXT NOT NULL DEFAULT 'upi', -- 'upi', 'neft', 'cash', 'cheque'
+      reference_number TEXT,
+      billing_period_start DATE NOT NULL,
+      billing_period_end DATE NOT NULL,
+      duration_months INTEGER NOT NULL DEFAULT 1,
+      status TEXT NOT NULL DEFAULT 'paid', -- 'paid', 'pending', 'waived'
+      notes TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (gym_id) REFERENCES gyms(id)
+    );
   `);
 
   // Ensure newer columns exist on existing tables
+  await ensureColumn(db, 'gyms', 'valid_until', "DATE DEFAULT (date('now', '+30 days'))");
+  await ensureColumn(db, 'gyms', 'grace_period_days', 'INTEGER DEFAULT 5');
   await ensureColumn(db, 'staff', 'base_salary', 'REAL DEFAULT 15000.0');
   await ensureColumn(db, 'members', 'pt_sessions_total', 'INTEGER DEFAULT 0');
   await ensureColumn(db, 'members', 'pt_sessions_remaining', 'INTEGER DEFAULT 0');

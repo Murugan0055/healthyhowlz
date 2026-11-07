@@ -559,5 +559,264 @@ router.get('/audit-logs', async (req, res) => {
   }
 });
 
+// =========================================================================
+// PHASE 2: SaaS Commercial Operations, B2B Invoicing & Bulk Onboarding
+// =========================================================================
+
+// 15. Record Offline / Manual SaaS Subscription Payment & Generate B2B Tax Invoice
+router.post('/gyms/:id/record-payment', async (req, res) => {
+  try {
+    const db = await getDb();
+    const { id } = req.params;
+    const {
+      amount,
+      duration_months = 1,
+      payment_mode = 'upi',
+      reference_number = '',
+      notes = ''
+    } = req.body;
+
+    const gym = await db.get('SELECT * FROM gyms WHERE id = ?', [id]);
+    if (!gym) return res.status(404).json({ error: 'Gym facility not found' });
+
+    const totalAmount = Number(amount) || Number(gym.monthly_fee) * Number(duration_months);
+    const gstRate = 18.0;
+    const baseAmount = +(totalAmount / (1 + gstRate / 100)).toFixed(2);
+    const gstAmount = +(totalAmount - baseAmount).toFixed(2);
+
+    const year = new Date().getFullYear();
+    const randomHex = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const invoiceNumber = `HH-SaaS-${year}-${randomHex}`;
+    const invoiceId = `inv-saas-${Date.now()}`;
+
+    // Calculate billing period: start today or from current valid_until if still active
+    const today = new Date().toISOString().split('T')[0];
+    let startDate = today;
+    if (gym.valid_until && gym.valid_until > today) {
+      startDate = gym.valid_until;
+    }
+
+    const startObj = new Date(startDate);
+    startObj.setMonth(startObj.getMonth() + Number(duration_months));
+    const endDate = startObj.toISOString().split('T')[0];
+
+    // Insert SaaS Invoice
+    await db.run(
+      `INSERT INTO saas_invoices (
+        id, gym_id, gym_name, owner_id, owner_name, invoice_number,
+        amount_base, gst_rate, gst_amount, total_amount, payment_mode,
+        reference_number, billing_period_start, billing_period_end, duration_months,
+        status, notes
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'paid', ?)`,
+      [
+        invoiceId, gym.id, gym.name, gym.owner_id, gym.owner_name, invoiceNumber,
+        baseAmount, gstRate, gstAmount, totalAmount, payment_mode,
+        reference_number, startDate, endDate, Number(duration_months), notes
+      ]
+    );
+
+    // Update Gym valid_until and reactivate status if trial/suspended
+    await db.run(
+      `UPDATE gyms SET valid_until = ?, status = 'active' WHERE id = ?`,
+      [endDate, id]
+    );
+
+    // Record in Platform Audit Logs
+    const adminId = req.user?.id || 'healthyhowlz_admin';
+    const auditId = `audit-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+    await db.run(
+      `INSERT INTO platform_audit_logs (id, admin_id, action, target_gym_id, target_user_id, details_json, ip_address)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        auditId,
+        adminId,
+        'saas_payment_recorded',
+        gym.id,
+        gym.owner_id,
+        JSON.stringify({
+          invoiceNumber,
+          totalAmount,
+          paymentMode: payment_mode,
+          durationMonths: duration_months,
+          validUntil: endDate
+        }),
+        req.ip || ''
+      ]
+    );
+
+    const createdInvoice = await db.get('SELECT * FROM saas_invoices WHERE id = ?', [invoiceId]);
+    const updatedGym = await db.get('SELECT * FROM gyms WHERE id = ?', [id]);
+
+    res.status(201).json({
+      success: true,
+      message: `Recorded ₹${totalAmount.toLocaleString('en-IN')} payment for ${gym.name}. Active until ${endDate}.`,
+      invoice: createdInvoice,
+      gym: updatedGym
+    });
+  } catch (err) {
+    console.error('Error recording SaaS payment:', err);
+    res.status(500).json({ error: 'Failed to record payment: ' + err.message });
+  }
+});
+
+// 16. Get SaaS Invoices for a Gym
+router.get('/gyms/:id/saas-invoices', async (req, res) => {
+  try {
+    const db = await getDb();
+    const { id } = req.params;
+    const invoices = await db.all(
+      `SELECT * FROM saas_invoices WHERE gym_id = ? ORDER BY created_at DESC`,
+      [id]
+    );
+    res.json(invoices);
+  } catch (err) {
+    console.error('Error fetching gym SaaS invoices:', err);
+    res.status(500).json({ error: 'Failed to fetch invoices' });
+  }
+});
+
+// 17. Get All Platform SaaS Invoices (Accounting Overview)
+router.get('/saas-invoices', async (req, res) => {
+  try {
+    const db = await getDb();
+    const invoices = await db.all(
+      `SELECT i.*, g.city as gym_city, g.slug as gym_slug
+       FROM saas_invoices i
+       LEFT JOIN gyms g ON i.gym_id = g.id
+       ORDER BY i.created_at DESC LIMIT 50`
+    );
+    res.json(invoices);
+  } catch (err) {
+    console.error('Error fetching all SaaS invoices:', err);
+    res.status(500).json({ error: 'Failed to fetch SaaS invoices' });
+  }
+});
+
+// 18. Bulk Member Importer (Onboarding Existing Gym Member Data)
+router.post('/gyms/:id/bulk-import-members', async (req, res) => {
+  try {
+    const db = await getDb();
+    const { id } = req.params;
+    const { members } = req.body;
+
+    if (!Array.isArray(members) || members.length === 0) {
+      return res.status(400).json({ error: 'No members provided for bulk import' });
+    }
+
+    const gym = await db.get('SELECT * FROM gyms WHERE id = ?', [id]);
+    if (!gym) return res.status(404).json({ error: 'Gym facility not found' });
+
+    let importedCount = 0;
+    let skippedCount = 0;
+    const errors = [];
+
+    // Fetch existing phone numbers for this gym
+    const existingMembers = await db.all('SELECT phone FROM members WHERE gym_id = ?', [id]);
+    const existingPhones = new Set(existingMembers.map(m => m.phone));
+
+    for (let i = 0; i < members.length; i++) {
+      const item = members[i];
+      const name = (item.name || '').trim();
+      const phone = (item.phone || '').trim().replace(/[^0-9]/g, '');
+
+      if (!name || phone.length < 10) {
+        skippedCount++;
+        errors.push(`Row ${i + 1}: Missing name or valid 10-digit phone (${name || 'Unknown'})`);
+        continue;
+      }
+
+      if (existingPhones.has(phone)) {
+        skippedCount++;
+        errors.push(`Row ${i + 1}: Phone ${phone} (${name}) already registered`);
+        continue;
+      }
+
+      const memberId = `mem-${Date.now().toString().slice(-6)}-${Math.random().toString(36).substring(2, 5)}`;
+      const joinDate = item.join_date || new Date().toISOString().split('T')[0];
+      const planMonths = Number(item.plan_months) || 3;
+      const basePrice = Number(item.amount_paid) || (planMonths === 1 ? 899 : planMonths === 3 ? 2499 : 4699);
+
+      const expDate = new Date(joinDate);
+      expDate.setMonth(expDate.getMonth() + planMonths);
+      const expiryDate = expDate.toISOString().split('T')[0];
+
+      const memberCode = `MEM-${Date.now().toString().slice(-4)}-${Math.floor(Math.random() * 900 + 100)}`;
+
+      // Insert member
+      await db.run(
+        `INSERT INTO members (
+          id, member_code, name, phone, email, gender,
+          plan_name, start_date, expiry_date,
+          status, gym_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?)`,
+        [
+          memberId,
+          memberCode,
+          name,
+          phone,
+          item.email || '',
+          item.gender || 'Male',
+          `${planMonths} Month Standard`,
+          joinDate,
+          expiryDate,
+          id
+        ]
+      );
+
+      // Insert initial invoice record
+      const invoiceNumber = `INV-${Date.now().toString().slice(-4)}-${Math.random().toString(36).substring(2, 5).toUpperCase()}`;
+      await db.run(
+        `INSERT INTO invoices (
+          id, invoice_number, member_id, member_name, member_phone,
+          item_type, item_description, subtotal, cgst, sgst, grand_total,
+          payment_method, status, gym_id
+        ) VALUES (?, ?, ?, ?, ?, 'membership', ?, ?, 0, 0, ?, 'cash', 'paid', ?)`,
+        [
+          `inv-${memberId}`,
+          invoiceNumber,
+          memberId,
+          name,
+          phone,
+          `${planMonths} Month Membership Plan`,
+          basePrice,
+          basePrice,
+          id
+        ]
+      );
+
+      existingPhones.add(phone);
+      importedCount++;
+    }
+
+    // Audit log
+    const adminId = req.user?.id || 'healthyhowlz_admin';
+    const auditId = `audit-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+    await db.run(
+      `INSERT INTO platform_audit_logs (id, admin_id, action, target_gym_id, target_user_id, details_json, ip_address)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        auditId,
+        adminId,
+        'bulk_member_import',
+        id,
+        null,
+        JSON.stringify({ importedCount, skippedCount, totalProcessed: members.length }),
+        req.ip || ''
+      ]
+    );
+
+    res.json({
+      success: true,
+      message: `Successfully imported ${importedCount} members into ${gym.name} (${skippedCount} skipped).`,
+      importedCount,
+      skippedCount,
+      errors: errors.slice(0, 10)
+    });
+  } catch (err) {
+    console.error('Error during bulk member import:', err);
+    res.status(500).json({ error: 'Failed to import members: ' + err.message });
+  }
+});
+
 export default router;
 

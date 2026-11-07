@@ -724,6 +724,39 @@ export const api = {
   getAuditLogs: async () => {
     const res = await fetch(`${BASE_URL}/platform/audit-logs`);
     return await res.json();
+  },
+
+  // --- Phase 2: SaaS Commercial Operations, B2B GST Invoicing & Bulk Onboarding ---
+  recordSaasPayment: async (gymId, payload) => {
+    const res = await fetch(`${BASE_URL}/platform/gyms/${gymId}/record-payment`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to record SaaS payment');
+    return data;
+  },
+
+  getGymSaasInvoices: async (gymId) => {
+    const res = await fetch(`${BASE_URL}/platform/gyms/${gymId}/saas-invoices`);
+    return await res.json();
+  },
+
+  getAllSaasInvoices: async () => {
+    const res = await fetch(`${BASE_URL}/platform/saas-invoices`);
+    return await res.json();
+  },
+
+  bulkImportMembers: async (gymId, members) => {
+    const res = await fetch(`${BASE_URL}/platform/gyms/${gymId}/bulk-import-members`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ members })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to import members');
+    return data;
   }
 };
 

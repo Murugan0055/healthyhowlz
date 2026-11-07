@@ -3,7 +3,8 @@ import {
   Building2, Plus, Search, ShieldCheck, TrendingUp, Users, CheckCircle,
   AlertTriangle, RefreshCw, ExternalLink, Sliders, Smartphone, Check,
   X, DollarSign, Activity, MapPin, Phone, Mail, Award, Lock, ArrowUpRight, LogOut,
-  Edit3, Trash2, Archive, Globe, Sparkles, Headphones, KeyRound, Megaphone, History, Radio, ShieldAlert
+  Edit3, Trash2, Archive, Globe, Sparkles, Headphones, KeyRound, Megaphone, History, Radio, ShieldAlert,
+  FileSpreadsheet, UploadCloud, CreditCard, Calendar, Clock, Receipt, Download
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useTenant } from '../context/TenantContext';
@@ -84,6 +85,25 @@ export default function PlatformAdminApp({ onLogout, onLaunchGym }) {
   const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
   const [auditLogs, setAuditLogs] = useState([]);
   const [auditLoading, setAuditLoading] = useState(false);
+
+  // Phase 2: Record SaaS Offline Payment & B2B GST Invoicing state
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [selectedGymForPayment, setSelectedGymForPayment] = useState(null);
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [generatedInvoice, setGeneratedInvoice] = useState(null);
+  const [paymentForm, setPaymentForm] = useState({
+    duration_months: 1,
+    payment_mode: 'upi',
+    reference_number: '',
+    notes: ''
+  });
+
+  // Phase 2: Bulk Member Importer state
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [selectedGymForImport, setSelectedGymForImport] = useState(null);
+  const [importLoading, setImportLoading] = useState(false);
+  const [importCsvText, setImportCsvText] = useState('');
+  const [importResults, setImportResults] = useState(null);
 
   const [notification, setNotification] = useState(null);
 
@@ -355,6 +375,96 @@ export default function PlatformAdminApp({ onLogout, onLaunchGym }) {
     }
   };
 
+  // Phase 2: Open SaaS Payment Recording Modal
+  const handleOpenPaymentModal = (gym = null) => {
+    const target = gym || gyms[0];
+    setSelectedGymForPayment(target);
+    setPaymentForm({
+      duration_months: 1,
+      payment_mode: 'upi',
+      reference_number: '',
+      notes: ''
+    });
+    setGeneratedInvoice(null);
+    setIsPaymentModalOpen(true);
+  };
+
+  // Phase 2: Submit SaaS Offline Payment
+  const handleSubmitPayment = async (e) => {
+    e.preventDefault();
+    if (!selectedGymForPayment) return;
+
+    try {
+      setPaymentLoading(true);
+      const fee = Number(selectedGymForPayment.monthly_fee) || 2499;
+      const totalAmount = fee * Number(paymentForm.duration_months);
+
+      const res = await api.recordSaasPayment(selectedGymForPayment.id, {
+        ...paymentForm,
+        amount: totalAmount
+      });
+      showNotification(res.message);
+      setGeneratedInvoice(res.invoice);
+      loadPlatformData();
+    } catch (err) {
+      showNotification('Error recording payment: ' + err.message, 'error');
+    } finally {
+      setPaymentLoading(false);
+    }
+  };
+
+  // Phase 2: Open Bulk Member Importer Modal
+  const handleOpenImportModal = (gym = null) => {
+    const target = gym || gyms[0];
+    setSelectedGymForImport(target);
+    setImportResults(null);
+    // Pre-fill a realistic sample CSV format
+    setImportCsvText(
+`name,phone,email,gender,plan_months,amount_paid,join_date
+Deepak Kumar,9840212345,deepak@gmail.com,Male,3,2499,${new Date().toISOString().split('T')[0]}
+Ananya Sundaram,9840323456,ananya@gmail.com,Female,6,4699,${new Date().toISOString().split('T')[0]}
+Rohan Varma,9840434567,rohan@gmail.com,Male,12,8999,${new Date().toISOString().split('T')[0]}`
+    );
+    setIsImportModalOpen(true);
+  };
+
+  // Phase 2: Process Bulk Member Import
+  const handleExecuteImport = async () => {
+    if (!selectedGymForImport || !importCsvText.trim()) return;
+
+    try {
+      setImportLoading(true);
+      const lines = importCsvText.trim().split('\n').map(l => l.trim()).filter(Boolean);
+      if (lines.length <= 1) {
+        alert('Please enter at least 1 member data row besides header.');
+        return;
+      }
+
+      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+      const parsedMembers = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        const parts = lines[i].split(',').map(p => p.trim());
+        if (parts.length >= 2) {
+          const memberObj = {};
+          headers.forEach((h, idx) => {
+            memberObj[h] = parts[idx] || '';
+          });
+          parsedMembers.push(memberObj);
+        }
+      }
+
+      const res = await api.bulkImportMembers(selectedGymForImport.id, parsedMembers);
+      setImportResults(res);
+      showNotification(res.message);
+      loadPlatformData();
+    } catch (err) {
+      showNotification('Error importing members: ' + err.message, 'error');
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
   // Filter gyms
   const filteredGyms = gyms.filter((g) => {
     const matchesSearch =
@@ -516,6 +626,83 @@ export default function PlatformAdminApp({ onLogout, onLaunchGym }) {
           </div>
         </section>
 
+        {/* HQ Operational Management Command Bar — 100% Mobile & Desktop Accessible */}
+        <section className="p-3.5 sm:p-4 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-xl space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center shrink-0">
+                <Sliders className="w-3.5 h-3.5" />
+              </div>
+              <div>
+                <h3 className="text-xs font-black text-white tracking-wider flex items-center gap-2">
+                  <span>HQ PLATFORM CONTROLS</span>
+                  <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold">
+                    MOBILE READY
+                  </span>
+                </h3>
+              </div>
+            </div>
+            <span className="text-[10px] text-slate-400 font-medium hidden sm:inline">
+              Urgent Floor Troubleshooting, Broadcasts & Commercial Operations
+            </span>
+          </div>
+
+          {/* 4 Dedicated Quick-Action Touch Cards (2x2 grid on mobile, 4-col row on desktop) */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 text-xs">
+            {/* 1. Global Incident Broadcasts */}
+            <button
+              onClick={handleOpenBroadcastModal}
+              className="p-3 rounded-2xl bg-gradient-to-b from-purple-950/40 to-slate-900 border border-purple-500/30 hover:border-purple-500 text-left transition-all active:scale-95 group shadow-sm"
+            >
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-purple-400">Notices</span>
+                <Megaphone className="w-4 h-4 text-purple-400 group-hover:scale-110 transition-transform" />
+              </div>
+              <div className="font-bold text-white text-xs">Broadcasts</div>
+              <p className="text-[10px] text-slate-400 mt-0.5 truncate">Send alerts to gym floors</p>
+            </button>
+
+            {/* 2. Platform Audit Trail */}
+            <button
+              onClick={handleOpenAuditLogs}
+              className="p-3 rounded-2xl bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-700/80 hover:border-slate-500 text-left transition-all active:scale-95 group shadow-sm"
+            >
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Security</span>
+                <History className="w-4 h-4 text-slate-300 group-hover:scale-110 transition-transform" />
+              </div>
+              <div className="font-bold text-white text-xs">Audit Trail</div>
+              <p className="text-[10px] text-slate-400 mt-0.5 truncate">Log of actions & logins</p>
+            </button>
+
+            {/* 3. Record SaaS Offline Payment */}
+            <button
+              onClick={() => handleOpenPaymentModal(null)}
+              className="p-3 rounded-2xl bg-gradient-to-b from-emerald-950/40 to-slate-900 border border-emerald-500/30 hover:border-emerald-500 text-left transition-all active:scale-95 group shadow-sm"
+            >
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">Billing</span>
+                <DollarSign className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform" />
+              </div>
+              <div className="font-bold text-white text-xs">Record Payment</div>
+              <p className="text-[10px] text-slate-400 mt-0.5 truncate">NEFT/UPI & B2B Invoices</p>
+            </button>
+
+            {/* 4. Bulk Member Onboarding Import */}
+            <button
+              onClick={() => handleOpenImportModal(null)}
+              className="p-3 rounded-2xl bg-gradient-to-b from-blue-950/40 to-slate-900 border border-blue-500/30 hover:border-blue-500 text-left transition-all active:scale-95 group shadow-sm"
+            >
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-blue-400">Onboarding</span>
+                <FileSpreadsheet className="w-4 h-4 text-blue-400 group-hover:scale-110 transition-transform" />
+              </div>
+              <div className="font-bold text-white text-xs">Bulk Import</div>
+              <p className="text-[10px] text-slate-400 mt-0.5 truncate">Import members from CSV</p>
+            </button>
+          </div>
+        </section>
+
         {/* Multi-Gym Architecture Showcase Banner */}
         <section className="p-4 sm:p-6 rounded-3xl bg-gradient-to-r from-emerald-950/60 via-slate-900 to-purple-950/40 border border-emerald-500/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="space-y-1">
@@ -596,6 +783,13 @@ export default function PlatformAdminApp({ onLogout, onLaunchGym }) {
                   {filteredGyms.map((gym) => {
                     const isKarthik = gym.owner_id === 'staff-owner';
                     const gymRoute = `/${gym.slug || gym.id}`;
+
+                    const validUntilStr = gym.valid_until ? gym.valid_until.split('T')[0] : '2026-12-31';
+                    const todayDate = new Date().toISOString().split('T')[0];
+                    const daysRemaining = Math.ceil((new Date(validUntilStr) - new Date(todayDate)) / (1000 * 60 * 60 * 24));
+                    const isGrace = daysRemaining <= 0 && daysRemaining >= -5;
+                    const isExpired = daysRemaining < -5;
+
                     return (
                       <tr key={gym.id} className="hover:bg-slate-800/40 transition-colors">
                         {/* Gym Name, Slug & City */}
@@ -651,12 +845,18 @@ export default function PlatformAdminApp({ onLogout, onLaunchGym }) {
                           </span>
                         </td>
 
-                        {/* Monthly Fee */}
+                        {/* Monthly Fee & Validity Countdown */}
                         <td className="py-4 px-4">
                           <span className="font-black text-slate-100 font-mono">
                             ₹{Number(gym.monthly_fee).toLocaleString('en-IN')}
                           </span>
                           <span className="text-[10px] text-slate-500 block">/month</span>
+                          <div className="mt-1 flex items-center gap-1 font-mono text-[10px]">
+                            <Clock className="w-3 h-3 text-slate-500" />
+                            <span className={isGrace ? 'text-amber-400 font-bold animate-pulse' : isExpired ? 'text-rose-400 font-bold' : 'text-slate-400'}>
+                              {isGrace ? `Grace: ${Math.abs(daysRemaining)}d` : isExpired ? 'Overdue' : `${daysRemaining}d valid`}
+                            </span>
+                          </div>
                         </td>
 
                         {/* Members Count */}
@@ -667,7 +867,7 @@ export default function PlatformAdminApp({ onLogout, onLaunchGym }) {
                           </div>
                         </td>
 
-                        {/* Status Badge (Static Badge - Status modification only inside Edit popup) */}
+                        {/* Status Badge */}
                         <td className="py-4 px-4">
                           <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
                             gym.status === 'active'
@@ -691,13 +891,13 @@ export default function PlatformAdminApp({ onLogout, onLaunchGym }) {
                           </span>
                         </td>
 
-                        {/* Actions: Support Mode, Staff PINs, Edit, Soft-Delete, Launch OS */}
+                        {/* Actions: Support Mode, Staff PINs, Record Payment, Bulk Import, Edit, Soft-Delete, Launch OS */}
                         <td className="py-4 px-4 text-right">
                           <div className="flex items-center justify-end gap-1.5">
                             <button
                               onClick={() => handleSupportImpersonate(gym)}
                               className="p-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 transition-colors"
-                              title="Enter Support Impersonation Mode (View as Owner)"
+                              title="Enter Support Impersonation Mode"
                             >
                               <Headphones className="w-3.5 h-3.5" />
                             </button>
@@ -707,6 +907,20 @@ export default function PlatformAdminApp({ onLogout, onLaunchGym }) {
                               title="Emergency Staff Credentials & PINs"
                             >
                               <KeyRound className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleOpenPaymentModal(gym)}
+                              className="p-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 transition-colors"
+                              title="Record Offline SaaS Payment & Issue Invoice"
+                            >
+                              <DollarSign className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleOpenImportModal(gym)}
+                              className="p-1.5 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/30 transition-colors"
+                              title="Bulk Import Members from CSV"
+                            >
+                              <FileSpreadsheet className="w-3.5 h-3.5" />
                             </button>
                             <button
                               onClick={() => handleOpenEdit(gym)}
@@ -745,6 +959,13 @@ export default function PlatformAdminApp({ onLogout, onLaunchGym }) {
             {filteredGyms.map((gym) => {
               const isKarthik = gym.owner_id === 'staff-owner';
               const gymRoute = `/${gym.slug || gym.id}`;
+
+              const validUntilStr = gym.valid_until ? gym.valid_until.split('T')[0] : '2026-12-31';
+              const todayDate = new Date().toISOString().split('T')[0];
+              const daysRemaining = Math.ceil((new Date(validUntilStr) - new Date(todayDate)) / (1000 * 60 * 60 * 24));
+              const isGrace = daysRemaining <= 0 && daysRemaining >= -5;
+              const isExpired = daysRemaining < -5;
+
               return (
                 <div
                   key={`card-${gym.id}`}
@@ -800,7 +1021,7 @@ export default function PlatformAdminApp({ onLogout, onLaunchGym }) {
                     </div>
                   </div>
 
-                  {/* Card Body: Owner & Plan Info */}
+                  {/* Card Body: Owner, Validity & Plan Info */}
                   <div className="grid grid-cols-2 gap-2 text-xs pt-1.5 pb-1.5 border-y border-slate-800/80">
                     <div>
                       <span className="text-[10px] text-slate-500 uppercase font-semibold block">Owner / Contact</span>
@@ -811,19 +1032,21 @@ export default function PlatformAdminApp({ onLogout, onLaunchGym }) {
                       </a>
                     </div>
                     <div>
-                      <span className="text-[10px] text-slate-500 uppercase font-semibold block">SaaS Plan / MRR</span>
+                      <span className="text-[10px] text-slate-500 uppercase font-semibold block">Plan & SaaS Validity</span>
                       <div className="flex items-center gap-1.5 mt-0.5">
                         <span className="font-bold text-emerald-400">₹{Number(gym.monthly_fee).toLocaleString('en-IN')}</span>
                         <span className="text-[10px] text-slate-500">/mo</span>
                       </div>
-                      <div className="flex items-center gap-1 text-[11px] text-slate-400 mt-0.5">
-                        <Users className="w-3 h-3 text-slate-500 shrink-0" />
-                        <span>{gym.total_members || 0} Members</span>
+                      <div className="flex items-center gap-1 text-[11px] font-mono mt-0.5">
+                        <Clock className="w-3 h-3 text-slate-500 shrink-0" />
+                        <span className={isGrace ? 'text-amber-400 font-bold' : isExpired ? 'text-rose-400 font-bold' : 'text-slate-400'}>
+                          {isGrace ? `Grace: ${Math.abs(daysRemaining)}d` : isExpired ? 'Overdue' : `${daysRemaining}d valid`}
+                        </span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Card Footer: Clean Action Buttons with Support Mode & Staff PINs */}
+                  {/* Card Footer: Clean Action Buttons with Support Mode, Staff PINs, Payment & Import */}
                   <div className="flex items-center justify-between gap-1.5 pt-1.5 border-t border-slate-800/80">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <button
@@ -841,8 +1064,22 @@ export default function PlatformAdminApp({ onLogout, onLaunchGym }) {
                         <KeyRound className="w-3.5 h-3.5" />
                       </button>
                       <button
+                        onClick={() => handleOpenPaymentModal(gym)}
+                        className="p-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 transition-colors"
+                        title="Record Offline SaaS Payment"
+                      >
+                        <DollarSign className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleOpenImportModal(gym)}
+                        className="p-1.5 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/30 transition-colors"
+                        title="Bulk Import Members from CSV"
+                      >
+                        <FileSpreadsheet className="w-3.5 h-3.5" />
+                      </button>
+                      <button
                         onClick={() => handleOpenEdit(gym)}
-                        className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 flex items-center gap-1 transition-colors"
+                        className="px-2 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 flex items-center gap-1 transition-colors"
                         title="Edit Facility"
                       >
                         <Edit3 className="w-3.5 h-3.5 text-slate-400" />
@@ -859,7 +1096,7 @@ export default function PlatformAdminApp({ onLogout, onLaunchGym }) {
 
                     <button
                       onClick={() => handleLaunchGym(gym)}
-                      className="px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center gap-1 transition-all shadow-sm shadow-emerald-500/20 shrink-0"
+                      className="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center gap-1 transition-all shadow-sm shadow-emerald-500/20 shrink-0"
                       title={`Launch into ${gym.name}`}
                     >
                       <span>Launch OS</span>
@@ -1567,8 +1804,8 @@ export default function PlatformAdminApp({ onLogout, onLaunchGym }) {
 
       {/* PHASE 1 MODAL 3: PLATFORM AUDIT TRAIL STREAM */}
       {isAuditModalOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto animate-in fade-in">
-          <div className="bg-[#0f172a] border border-slate-700 rounded-3xl max-w-2xl w-full p-6 text-slate-100 shadow-2xl relative my-8">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in">
+          <div className="bg-[#0f172a] border border-slate-700 rounded-3xl max-w-2xl w-full p-4 sm:p-6 text-slate-100 shadow-2xl relative my-auto max-h-[92vh] overflow-y-auto">
             <button
               onClick={() => setIsAuditModalOpen(false)}
               className="absolute top-5 right-5 p-1.5 rounded-full bg-slate-800 text-slate-400 hover:text-white"
@@ -1594,8 +1831,8 @@ export default function PlatformAdminApp({ onLogout, onLaunchGym }) {
             ) : auditLogs.length === 0 ? (
               <p className="p-8 text-center text-slate-500 italic text-xs">No administrative actions logged yet.</p>
             ) : (
-              <div className="rounded-2xl border border-slate-800 overflow-hidden bg-slate-900/70 max-h-96 overflow-y-auto text-xs">
-                <table className="w-full text-left">
+              <div className="rounded-2xl border border-slate-800 overflow-x-auto bg-slate-900/70 max-h-96 overflow-y-auto text-xs">
+                <table className="w-full text-left min-w-[460px]">
                   <thead>
                     <tr className="bg-slate-950 border-b border-slate-800 text-slate-400 text-[10px] uppercase font-semibold">
                       <th className="py-2.5 px-3">Timestamp</th>
@@ -1629,6 +1866,416 @@ export default function PlatformAdminApp({ onLogout, onLaunchGym }) {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* PHASE 2 MODAL 1: RECORD SAAS OFFLINE PAYMENT & B2B GST TAX INVOICE */}
+      {isPaymentModalOpen && selectedGymForPayment && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in">
+          <div className="bg-[#0f172a] border border-slate-700 rounded-3xl max-w-xl w-full p-4 sm:p-6 text-slate-100 shadow-2xl relative my-auto max-h-[92vh] overflow-y-auto">
+            <button
+              onClick={() => {
+                setIsPaymentModalOpen(false);
+                setGeneratedInvoice(null);
+              }}
+              className="absolute top-5 right-5 p-1.5 rounded-full bg-slate-800 text-slate-400 hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+                <Receipt className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-base text-white">Record SaaS Subscription Payment</h3>
+                <p className="text-xs text-slate-400">Offline Collection (NEFT/UPI/Cash) & B2B GST Invoicing</p>
+              </div>
+            </div>
+
+            {/* If Invoice Generated - Show Tax Invoice */}
+            {generatedInvoice ? (
+              <div className="space-y-4">
+                <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-3">
+                  <CheckCircle className="w-5 h-5 shrink-0 text-emerald-400" />
+                  <div>
+                    <span className="font-bold block text-sm text-white">Payment Recorded Successfully!</span>
+                    <span>Facility validity extended to <span className="font-mono font-bold text-emerald-400">{generatedInvoice.billing_period_end}</span>. Status is active.</span>
+                  </div>
+                </div>
+
+                {/* Tax Invoice Document Card */}
+                <div className="p-5 rounded-2xl bg-slate-900 border border-slate-700 space-y-4 text-xs font-mono">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                    <div>
+                      <span className="text-[10px] text-slate-500 uppercase tracking-widest block font-sans">B2B TAX INVOICE</span>
+                      <span className="text-sm font-black text-white">{generatedInvoice.invoice_number}</span>
+                    </div>
+                    <span className="px-2.5 py-1 rounded-full text-[10px] font-sans font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
+                      PAID • {generatedInvoice.payment_mode.toUpperCase()}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 text-[11px] font-sans">
+                    <div>
+                      <span className="text-slate-400 block text-[10px]">BILLED TO FACILITY:</span>
+                      <span className="font-bold text-white block">{generatedInvoice.gym_name}</span>
+                      <span className="text-slate-400">{generatedInvoice.owner_name}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-slate-400 block text-[10px]">COVERAGE PERIOD:</span>
+                      <span className="text-white font-medium">{generatedInvoice.billing_period_start} to {generatedInvoice.billing_period_end}</span>
+                      <span className="text-emerald-400 font-bold block">({generatedInvoice.duration_months} Month{generatedInvoice.duration_months > 1 ? 's' : ''})</span>
+                    </div>
+                  </div>
+
+                  {generatedInvoice.reference_number && (
+                    <div className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 text-[11px]">
+                      <span className="text-slate-400">UTR / Ref: </span>
+                      <span className="text-emerald-300 font-bold">{generatedInvoice.reference_number}</span>
+                    </div>
+                  )}
+
+                  {/* Line Items Table */}
+                  <div className="border-t border-b border-slate-800 py-3 space-y-2">
+                    <div className="flex justify-between text-slate-400 text-[11px]">
+                      <span>HealthyHowlz Platform SaaS (SAC 998313)</span>
+                      <span className="text-white">₹{Number(generatedInvoice.amount_base).toLocaleString('en-IN')}</span>
+                    </div>
+                    <div className="flex justify-between text-slate-400 text-[11px]">
+                      <span>CGST (9.0%)</span>
+                      <span className="text-white">₹{((Number(generatedInvoice.gst_amount) || 0) / 2).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-slate-400 text-[11px]">
+                      <span>SGST (9.0%)</span>
+                      <span className="text-white">₹{((Number(generatedInvoice.gst_amount) || 0) / 2).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-white font-bold text-sm pt-2 border-t border-slate-800">
+                      <span>Total Invoice Amount</span>
+                      <span className="text-emerald-400">₹{Number(generatedInvoice.total_amount).toLocaleString('en-IN')}</span>
+                    </div>
+                  </div>
+
+                  <p className="text-[10px] text-slate-500 font-sans italic text-center">
+                    This is an electronically generated SaaS tax invoice under GST Rules 2017.
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsPaymentModalOpen(false);
+                      setGeneratedInvoice(null);
+                    }}
+                    className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmitPayment} className="space-y-4 text-xs">
+                {/* Facility Selector */}
+                <div>
+                  <label className="block text-slate-400 font-semibold mb-1">Target Gym Facility *</label>
+                  <select
+                    value={selectedGymForPayment.id}
+                    onChange={(e) => {
+                      const gym = gyms.find(g => g.id === e.target.value);
+                      if (gym) setSelectedGymForPayment(gym);
+                    }}
+                    className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white font-medium focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  >
+                    {gyms.map((g) => (
+                      <option key={g.id} value={g.id}>
+                        {g.name} ({g.city}) — Tier: {g.subscription_tier} (₹{Number(g.monthly_fee || 2499).toLocaleString('en-IN')}/mo)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Duration Selector */}
+                  <div>
+                    <label className="block text-slate-400 font-semibold mb-1">Subscription Extension Duration</label>
+                    <select
+                      value={paymentForm.duration_months}
+                      onChange={(e) => setPaymentForm({ ...paymentForm, duration_months: Number(e.target.value) })}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    >
+                      <option value={1}>1 Month (Monthly Renewal)</option>
+                      <option value={3}>3 Months (Quarterly Pass)</option>
+                      <option value={6}>6 Months (Half-Yearly)</option>
+                      <option value={12}>12 Months (Annual Enterprise)</option>
+                    </select>
+                  </div>
+
+                  {/* Payment Mode */}
+                  <div>
+                    <label className="block text-slate-400 font-semibold mb-1">Payment Method / Gateway</label>
+                    <select
+                      value={paymentForm.payment_mode}
+                      onChange={(e) => setPaymentForm({ ...paymentForm, payment_mode: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    >
+                      <option value="upi">UPI / QR Payment</option>
+                      <option value="neft">NEFT / IMPS / NetBanking</option>
+                      <option value="cash">Direct Cash Collection</option>
+                      <option value="cheque">Bank Cheque</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Reference Number & UTR */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-slate-400 font-semibold mb-1">Bank Reference / UTR Number</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. UTR-491029381928"
+                      value={paymentForm.reference_number}
+                      onChange={(e) => setPaymentForm({ ...paymentForm, reference_number: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-400 font-semibold mb-1">Billing Remarks / Notes</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Paid to HDFC current account"
+                      value={paymentForm.notes}
+                      onChange={(e) => setPaymentForm({ ...paymentForm, notes: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    />
+                  </div>
+                </div>
+
+                {/* Live GST & Calculation Summary Card */}
+                {(() => {
+                  const monthlyFee = Number(selectedGymForPayment.monthly_fee) || 2499;
+                  const total = monthlyFee * Number(paymentForm.duration_months);
+                  const base = +(total / 1.18).toFixed(2);
+                  const gst = +(total - base).toFixed(2);
+                  return (
+                    <div className="p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-2">
+                      <div className="flex items-center justify-between text-xs font-semibold">
+                        <span className="text-slate-400">Base SaaS Fee ({paymentForm.duration_months} mo @ ₹{monthlyFee}/mo):</span>
+                        <span className="text-slate-200">₹{base.toLocaleString('en-IN')}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs font-semibold">
+                        <span className="text-slate-400">18% GST (CGST 9% + SGST 9%):</span>
+                        <span className="text-slate-300">₹{gst.toLocaleString('en-IN')}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm font-black pt-2 border-t border-slate-800">
+                        <span className="text-white">Total Amount to Collect:</span>
+                        <span className="text-emerald-400 text-base">₹{total.toLocaleString('en-IN')}</span>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                <div className="flex items-center justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsPaymentModalOpen(false)}
+                    className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={paymentLoading}
+                    className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold flex items-center gap-1.5 transition-transform active:scale-95 disabled:opacity-50 shadow-md shadow-emerald-500/20"
+                  >
+                    {paymentLoading ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        <span>Recording...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Check className="w-4 h-4 stroke-[3]" />
+                        <span>Confirm & Generate Invoice</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* PHASE 2 MODAL 2: BULK CSV MEMBER ONBOARDING IMPORTER */}
+      {isImportModalOpen && selectedGymForImport && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in">
+          <div className="bg-[#0f172a] border border-slate-700 rounded-3xl max-w-xl w-full p-4 sm:p-6 text-slate-100 shadow-2xl relative my-auto max-h-[92vh] overflow-y-auto">
+            <button
+              onClick={() => {
+                setIsImportModalOpen(false);
+                setImportResults(null);
+              }}
+              className="absolute top-5 right-5 p-1.5 rounded-full bg-slate-800 text-slate-400 hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-2xl bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0">
+                <FileSpreadsheet className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-base text-white">Bulk Member Onboarding Importer</h3>
+                <p className="text-xs text-slate-400">Migrate and enroll 100+ members via CSV data</p>
+              </div>
+            </div>
+
+            {/* Target Facility Selector */}
+            <div className="mb-4">
+              <label className="block text-slate-400 font-semibold mb-1 text-xs">Destination Facility *</label>
+              <select
+                value={selectedGymForImport.id}
+                onChange={(e) => {
+                  const gym = gyms.find(g => g.id === e.target.value);
+                  if (gym) setSelectedGymForImport(gym);
+                }}
+                className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white font-medium text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                {gyms.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.name} ({g.city})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* If Import Results exist, show summary */}
+            {importResults ? (
+              <div className="space-y-4 text-xs">
+                <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 flex items-center gap-3">
+                  <CheckCircle className="w-5 h-5 shrink-0 text-emerald-400" />
+                  <div>
+                    <span className="font-bold block text-sm text-white">{importResults.message}</span>
+                    <span>Added to <span className="font-bold text-emerald-300">{selectedGymForImport.name}</span> membership directory.</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 text-center">
+                    <span className="text-[10px] text-slate-400 uppercase font-bold block">Enrolled</span>
+                    <span className="text-xl font-black text-emerald-400">{importResults.importedCount ?? importResults.imported ?? 0}</span>
+                  </div>
+                  <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 text-center">
+                    <span className="text-[10px] text-slate-400 uppercase font-bold block">Skipped / Existed</span>
+                    <span className="text-xl font-black text-amber-400">{importResults.skippedCount ?? importResults.skipped ?? 0}</span>
+                  </div>
+                </div>
+
+                {importResults.errors && importResults.errors.length > 0 && (
+                  <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
+                    <span className="text-[10px] text-slate-400 uppercase font-bold block">Details / Skipped Items:</span>
+                    <div className="max-h-28 overflow-y-auto space-y-1 text-[11px] text-slate-300">
+                      {importResults.errors.map((err, idx) => (
+                        <div key={idx} className="flex items-center gap-1.5 text-amber-400">
+                          <span>•</span>
+                          <span>{err}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsImportModalOpen(false);
+                      setImportResults(null);
+                    }}
+                    className="px-5 py-2.5 rounded-xl bg-blue-500 hover:bg-blue-400 text-slate-950 font-bold text-xs"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3 text-xs">
+                <div className="flex items-center justify-between">
+                  <label className="text-slate-400 font-semibold text-xs">Paste CSV Data</label>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const today = new Date().toISOString().split('T')[0];
+                        setImportCsvText(
+`name,phone,email,gender,plan_months,amount_paid,join_date
+Deepak Kumar,9840212345,deepak@gmail.com,Male,3,2499,${today}
+Ananya Sundaram,9840323456,ananya@gmail.com,Female,6,4699,${today}
+Rohan Varma,9840434567,rohan@gmail.com,Male,12,8999,${today}`
+                        );
+                      }}
+                      className="text-[10px] text-blue-400 hover:underline font-bold"
+                    >
+                      Fill Sample Data
+                    </button>
+                    <span className="text-slate-600">|</span>
+                    <button
+                      type="button"
+                      onClick={() => setImportCsvText('')}
+                      className="text-[10px] text-slate-500 hover:text-slate-300 font-bold"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+
+                <textarea
+                  rows={7}
+                  value={importCsvText}
+                  onChange={(e) => setImportCsvText(e.target.value)}
+                  placeholder="name,phone,email,gender,plan_months,amount_paid,join_date"
+                  className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white font-mono text-[11px] focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+
+                <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800 text-[11px] text-slate-400 space-y-1">
+                  <div className="flex items-center gap-1.5 text-blue-400 font-bold">
+                    <UploadCloud className="w-3.5 h-3.5" />
+                    <span>CSV Format Requirements:</span>
+                  </div>
+                  <p>Required fields: <code className="text-slate-200">name, phone</code> (10 digits). Optional: <code className="text-slate-200">email, gender, plan_months, amount_paid, join_date</code>.</p>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsImportModalOpen(false)}
+                    className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleExecuteImport}
+                    disabled={importLoading || !importCsvText.trim()}
+                    className="px-5 py-2.5 rounded-xl bg-blue-500 hover:bg-blue-400 text-slate-950 font-bold flex items-center gap-1.5 transition-transform active:scale-95 disabled:opacity-50 shadow-md shadow-blue-500/20"
+                  >
+                    {importLoading ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        <span>Importing Members...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Check className="w-4 h-4 stroke-[3]" />
+                        <span>Execute Bulk Import</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             )}
           </div>
