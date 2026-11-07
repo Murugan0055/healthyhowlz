@@ -446,6 +446,41 @@ async function initSchema(db) {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (gym_id) REFERENCES gyms(id)
     );
+
+    -- Phase 3: In-App Support Tickets & Floor Dispute Resolution
+    CREATE TABLE IF NOT EXISTS platform_support_tickets (
+      id TEXT PRIMARY KEY,
+      ticket_number TEXT UNIQUE NOT NULL,
+      gym_id TEXT NOT NULL,
+      gym_name TEXT NOT NULL,
+      requester_id TEXT NOT NULL,
+      requester_name TEXT NOT NULL,
+      requester_role TEXT NOT NULL DEFAULT 'owner',
+      category TEXT NOT NULL DEFAULT 'technical', -- 'technical', 'billing', 'hardware', 'dispute'
+      priority TEXT NOT NULL DEFAULT 'medium', -- 'low', 'medium', 'high', 'critical'
+      subject TEXT NOT NULL,
+      description TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'open', -- 'open', 'in_progress', 'resolved'
+      assigned_to TEXT DEFAULT 'HealthyHowlz HQ Admin',
+      resolution_notes TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (gym_id) REFERENCES gyms(id)
+    );
+
+    -- Phase 3: Kiosk & Hardware Heartbeat Telemetry
+    CREATE TABLE IF NOT EXISTS platform_kiosk_heartbeats (
+      id TEXT PRIMARY KEY,
+      gym_id TEXT UNIQUE NOT NULL,
+      device_name TEXT DEFAULT 'Front Desk iPad/Tablet',
+      ip_address TEXT,
+      camera_status TEXT DEFAULT 'active', -- 'active', 'idle', 'offline', 'permission_denied'
+      offline_queue_count INTEGER DEFAULT 0,
+      last_ping_ms INTEGER DEFAULT 24,
+      status TEXT DEFAULT 'online', -- 'online', 'unstable', 'offline'
+      last_seen_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (gym_id) REFERENCES gyms(id)
+    );
   `);
 
   // Ensure newer columns exist on existing tables

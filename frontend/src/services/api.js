@@ -757,6 +757,66 @@ export const api = {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to import members');
     return data;
+  },
+
+  // --- Phase 3: Hardware Heartbeats, Snapshots, Maintenance & Support Tickets ---
+  getKiosksStatus: async () => {
+    const res = await fetch(`${BASE_URL}/platform/kiosks/status`);
+    return await res.json();
+  },
+
+  pingGymKiosk: async (gymId) => {
+    const res = await fetch(`${BASE_URL}/platform/gyms/${gymId}/ping`, {
+      method: 'POST'
+    });
+    return await res.json();
+  },
+
+  exportGymSnapshot: async (gymId) => {
+    const res = await fetch(`${BASE_URL}/platform/gyms/${gymId}/export-snapshot`);
+    if (!res.ok) throw new Error('Failed to export tenant snapshot');
+    return await res.json();
+  },
+
+  getMaintenanceStats: async () => {
+    const res = await fetch(`${BASE_URL}/platform/maintenance/stats`);
+    return await res.json();
+  },
+
+  runMaintenanceVacuum: async () => {
+    const res = await fetch(`${BASE_URL}/platform/maintenance/vacuum`, {
+      method: 'POST'
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to vacuum database');
+    return data;
+  },
+
+  getSupportTickets: async () => {
+    const res = await fetch(`${BASE_URL}/platform/tickets`);
+    return await res.json();
+  },
+
+  createSupportTicket: async (payload) => {
+    const res = await fetch(`${BASE_URL}/platform/tickets`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to create support ticket');
+    return data;
+  },
+
+  updateSupportTicket: async (ticketId, payload) => {
+    const res = await fetch(`${BASE_URL}/platform/tickets/${ticketId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to update support ticket');
+    return data;
   }
 };
 

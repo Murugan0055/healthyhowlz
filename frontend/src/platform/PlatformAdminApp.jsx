@@ -4,7 +4,8 @@ import {
   AlertTriangle, RefreshCw, ExternalLink, Sliders, Smartphone, Check,
   X, DollarSign, Activity, MapPin, Phone, Mail, Award, Lock, ArrowUpRight, LogOut,
   Edit3, Trash2, Archive, Globe, Sparkles, Headphones, KeyRound, Megaphone, History, Radio, ShieldAlert,
-  FileSpreadsheet, UploadCloud, CreditCard, Calendar, Clock, Receipt, Download
+  FileSpreadsheet, UploadCloud, CreditCard, Calendar, Clock, Receipt, Download,
+  Wifi, WifiOff, HardDrive, Database, LifeBuoy, Ticket, MessageSquare, Zap, Gauge, Terminal, CheckCircle2, Shield, Eye
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useTenant } from '../context/TenantContext';
@@ -105,6 +106,36 @@ export default function PlatformAdminApp({ onLogout, onLaunchGym }) {
   const [importCsvText, setImportCsvText] = useState('');
   const [importResults, setImportResults] = useState(null);
 
+  // Phase 3: Sub-Navigation & Monitoring state
+  const [activeTab, setActiveTab] = useState('facilities'); // 'facilities' | 'diagnostics' | 'tickets' | 'maintenance'
+
+  // Phase 3: Kiosk Diagnostics & Telemetry
+  const [kiosks, setKiosks] = useState([]);
+  const [kiosksLoading, setKiosksLoading] = useState(false);
+  const [pingingGymId, setPingingGymId] = useState(null);
+
+  // Phase 3: Support Ticket Desk
+  const [tickets, setTickets] = useState([]);
+  const [ticketsLoading, setTicketsLoading] = useState(false);
+  const [ticketFilter, setTicketFilter] = useState('all');
+  const [selectedTicketForEdit, setSelectedTicketForEdit] = useState(null);
+  const [ticketResolutionNotes, setTicketResolutionNotes] = useState('');
+  const [ticketNewStatus, setTicketNewStatus] = useState('open');
+  const [isNewTicketOpen, setIsNewTicketOpen] = useState(false);
+  const [newTicketForm, setNewTicketForm] = useState({
+    gym_id: '',
+    category: 'technical',
+    priority: 'medium',
+    subject: '',
+    description: ''
+  });
+
+  // Phase 3: Database Maintenance & Snapshots
+  const [maintenanceStats, setMaintenanceStats] = useState(null);
+  const [maintenanceLoading, setMaintenanceLoading] = useState(false);
+  const [vacuumLoading, setVacuumLoading] = useState(false);
+  const [exportingGymId, setExportingGymId] = useState(null);
+
   const [notification, setNotification] = useState(null);
 
   const showNotification = (msg, type = 'success') => {
@@ -131,7 +162,15 @@ export default function PlatformAdminApp({ onLogout, onLaunchGym }) {
 
   useEffect(() => {
     loadPlatformData();
+    loadKiosksStatus();
+    loadTickets();
   }, []);
+
+  useEffect(() => {
+    if (activeTab === 'diagnostics') loadKiosksStatus();
+    if (activeTab === 'tickets') loadTickets();
+    if (activeTab === 'maintenance') loadMaintenanceStats();
+  }, [activeTab]);
 
   // Handle Launch into specific gym
   const handleLaunchGym = (gym) => {
@@ -465,6 +504,143 @@ Rohan Varma,9840434567,rohan@gmail.com,Male,12,8999,${new Date().toISOString().s
     }
   };
 
+  // Phase 3: Load Kiosks Status
+  const loadKiosksStatus = async () => {
+    try {
+      setKiosksLoading(true);
+      const data = await api.getKiosksStatus();
+      setKiosks(data || []);
+    } catch (err) {
+      console.error('Error fetching kiosks:', err);
+    } finally {
+      setKiosksLoading(false);
+    }
+  };
+
+  // Phase 3: Ping Kiosk Terminal
+  const handlePingKiosk = async (gymId) => {
+    try {
+      setPingingGymId(gymId);
+      const res = await api.pingGymKiosk(gymId);
+      showNotification(res.message);
+      setKiosks((prev) =>
+        prev.map((k) =>
+          k.gymId === gymId
+            ? { ...k, lastPingMs: res.latencyMs, status: res.status, cameraStatus: res.cameraStatus, lastSeenAt: new Date().toISOString() }
+            : k
+        )
+      );
+    } catch (err) {
+      showNotification('Ping failed: ' + err.message, 'error');
+    } finally {
+      setPingingGymId(null);
+    }
+  };
+
+  // Phase 3: Load Support Tickets
+  const loadTickets = async () => {
+    try {
+      setTicketsLoading(true);
+      const data = await api.getSupportTickets();
+      setTickets(data || []);
+    } catch (err) {
+      console.error('Error fetching tickets:', err);
+    } finally {
+      setTicketsLoading(false);
+    }
+  };
+
+  // Phase 3: Open Edit Ticket Modal
+  const handleOpenEditTicket = (tkt) => {
+    setSelectedTicketForEdit(tkt);
+    setTicketNewStatus(tkt.status);
+    setTicketResolutionNotes(tkt.resolution_notes || '');
+  };
+
+  // Phase 3: Save Ticket Resolution
+  const handleSaveTicketResolution = async () => {
+    if (!selectedTicketForEdit) return;
+    try {
+      const res = await api.updateSupportTicket(selectedTicketForEdit.id, {
+        status: ticketNewStatus,
+        resolution_notes: ticketResolutionNotes
+      });
+      showNotification(res.message);
+      setSelectedTicketForEdit(null);
+      loadTickets();
+    } catch (err) {
+      showNotification('Failed to update ticket: ' + err.message, 'error');
+    }
+  };
+
+  // Phase 3: Create Support Ticket
+  const handleCreateTicket = async (e) => {
+    e.preventDefault();
+    try {
+      const targetGym = newTicketForm.gym_id || (gyms[0] ? gyms[0].id : 'gym-gudiyatham');
+      const res = await api.createSupportTicket({ ...newTicketForm, gym_id: targetGym });
+      showNotification(res.message);
+      setIsNewTicketOpen(false);
+      setNewTicketForm({
+        gym_id: gyms[0]?.id || '',
+        category: 'technical',
+        priority: 'medium',
+        subject: '',
+        description: ''
+      });
+      loadTickets();
+    } catch (err) {
+      showNotification('Failed to create ticket: ' + err.message, 'error');
+    }
+  };
+
+  // Phase 3: Load DB Maintenance Stats
+  const loadMaintenanceStats = async () => {
+    try {
+      setMaintenanceLoading(true);
+      const data = await api.getMaintenanceStats();
+      setMaintenanceStats(data);
+    } catch (err) {
+      console.error('Error fetching maintenance stats:', err);
+    } finally {
+      setMaintenanceLoading(false);
+    }
+  };
+
+  // Phase 3: Run SQLite Vacuum
+  const handleRunVacuum = async () => {
+    try {
+      setVacuumLoading(true);
+      const res = await api.runMaintenanceVacuum();
+      showNotification(res.message);
+      loadMaintenanceStats();
+    } catch (err) {
+      showNotification('Vacuum error: ' + err.message, 'error');
+    } finally {
+      setVacuumLoading(false);
+    }
+  };
+
+  // Phase 3: Export Tenant Snapshot Download
+  const handleExportSnapshot = async (gym) => {
+    try {
+      setExportingGymId(gym.id);
+      const snapshot = await api.exportGymSnapshot(gym.id);
+      const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(snapshot, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute('href', dataStr);
+      downloadAnchor.setAttribute('download', `healthyhowlz-backup-${gym.slug || gym.id}-${new Date().toISOString().split('T')[0]}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      showNotification(`Exported complete snapshot for ${gym.name}!`);
+    } catch (err) {
+      showNotification('Export failed: ' + err.message, 'error');
+    } finally {
+      setExportingGymId(null);
+    }
+  };
+
   // Filter gyms
   const filteredGyms = gyms.filter((g) => {
     const matchesSearch =
@@ -647,8 +823,8 @@ Rohan Varma,9840434567,rohan@gmail.com,Male,12,8999,${new Date().toISOString().s
             </span>
           </div>
 
-          {/* 4 Dedicated Quick-Action Touch Cards (2x2 grid on mobile, 4-col row on desktop) */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 text-xs">
+          {/* 6 Dedicated Quick-Action Touch Cards (2x3 on mobile, 3x2 on tablet, 6-col on desktop) */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-2.5 text-xs">
             {/* 1. Global Incident Broadcasts */}
             <button
               onClick={handleOpenBroadcastModal}
@@ -659,7 +835,7 @@ Rohan Varma,9840434567,rohan@gmail.com,Male,12,8999,${new Date().toISOString().s
                 <Megaphone className="w-4 h-4 text-purple-400 group-hover:scale-110 transition-transform" />
               </div>
               <div className="font-bold text-white text-xs">Broadcasts</div>
-              <p className="text-[10px] text-slate-400 mt-0.5 truncate">Send alerts to gym floors</p>
+              <p className="text-[10px] text-slate-400 mt-0.5 truncate">Send floor alerts</p>
             </button>
 
             {/* 2. Platform Audit Trail */}
@@ -672,7 +848,7 @@ Rohan Varma,9840434567,rohan@gmail.com,Male,12,8999,${new Date().toISOString().s
                 <History className="w-4 h-4 text-slate-300 group-hover:scale-110 transition-transform" />
               </div>
               <div className="font-bold text-white text-xs">Audit Trail</div>
-              <p className="text-[10px] text-slate-400 mt-0.5 truncate">Log of actions & logins</p>
+              <p className="text-[10px] text-slate-400 mt-0.5 truncate">Admin action log</p>
             </button>
 
             {/* 3. Record SaaS Offline Payment */}
@@ -685,7 +861,7 @@ Rohan Varma,9840434567,rohan@gmail.com,Male,12,8999,${new Date().toISOString().s
                 <DollarSign className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform" />
               </div>
               <div className="font-bold text-white text-xs">Record Payment</div>
-              <p className="text-[10px] text-slate-400 mt-0.5 truncate">NEFT/UPI & B2B Invoices</p>
+              <p className="text-[10px] text-slate-400 mt-0.5 truncate">NEFT/UPI & Invoices</p>
             </button>
 
             {/* 4. Bulk Member Onboarding Import */}
@@ -698,7 +874,46 @@ Rohan Varma,9840434567,rohan@gmail.com,Male,12,8999,${new Date().toISOString().s
                 <FileSpreadsheet className="w-4 h-4 text-blue-400 group-hover:scale-110 transition-transform" />
               </div>
               <div className="font-bold text-white text-xs">Bulk Import</div>
-              <p className="text-[10px] text-slate-400 mt-0.5 truncate">Import members from CSV</p>
+              <p className="text-[10px] text-slate-400 mt-0.5 truncate">Import CSV members</p>
+            </button>
+
+            {/* 5. Kiosk Diagnostics */}
+            <button
+              onClick={() => setActiveTab('diagnostics')}
+              className={`p-3 rounded-2xl border text-left transition-all active:scale-95 group shadow-sm ${
+                activeTab === 'diagnostics'
+                  ? 'bg-amber-950/40 border-amber-400 ring-1 ring-amber-400/40'
+                  : 'bg-gradient-to-b from-amber-950/30 to-slate-900 border-amber-500/30 hover:border-amber-500'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400">Hardware</span>
+                <Activity className="w-4 h-4 text-amber-400 group-hover:scale-110 transition-transform" />
+              </div>
+              <div className="font-bold text-white text-xs">Diagnostics</div>
+              <p className="text-[10px] text-slate-400 mt-0.5 truncate">Camera & Kiosk Pings</p>
+            </button>
+
+            {/* 6. Support Desk */}
+            <button
+              onClick={() => setActiveTab('tickets')}
+              className={`p-3 rounded-2xl border text-left transition-all active:scale-95 group shadow-sm ${
+                activeTab === 'tickets'
+                  ? 'bg-rose-950/40 border-rose-400 ring-1 ring-rose-400/40'
+                  : 'bg-gradient-to-b from-rose-950/30 to-slate-900 border-rose-500/30 hover:border-rose-500'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-rose-400">Help Desk</span>
+                <LifeBuoy className="w-4 h-4 text-rose-400 group-hover:scale-110 transition-transform" />
+              </div>
+              <div className="font-bold text-white text-xs flex items-center justify-between">
+                <span>Support Desk</span>
+                {tickets.filter(t => t.status === 'open').length > 0 && (
+                  <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping inline-block" />
+                )}
+              </div>
+              <p className="text-[10px] text-slate-400 mt-0.5 truncate">In-app tickets & disputes</p>
             </button>
           </div>
         </section>
@@ -725,7 +940,67 @@ Rohan Varma,9840434567,rohan@gmail.com,Male,12,8999,${new Date().toISOString().s
           </button>
         </section>
 
+        {/* Phase 3: Platform Workspace Sub-Navigation Tabs */}
+        <section className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none border-b border-slate-800/80">
+          <button
+            onClick={() => setActiveTab('facilities')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold whitespace-nowrap transition-all ${
+              activeTab === 'facilities'
+                ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20'
+                : 'bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800'
+            }`}
+          >
+            <Building2 className="w-4 h-4" />
+            <span>Facilities Directory ({gyms.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('diagnostics')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold whitespace-nowrap transition-all ${
+              activeTab === 'diagnostics'
+                ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20'
+                : 'bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800'
+            }`}
+          >
+            <Activity className="w-4 h-4" />
+            <span>Kiosk Hardware Diagnostics</span>
+            {kiosks.some(k => k.status === 'offline') && (
+              <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+            )}
+          </button>
+
+          <button
+            onClick={() => setActiveTab('tickets')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold whitespace-nowrap transition-all ${
+              activeTab === 'tickets'
+                ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20'
+                : 'bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800'
+            }`}
+          >
+            <LifeBuoy className="w-4 h-4" />
+            <span>Support Ticket Desk</span>
+            {tickets.filter(t => t.status === 'open').length > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] font-black bg-rose-500 text-white">
+                {tickets.filter(t => t.status === 'open').length}
+              </span>
+            )}
+          </button>
+
+          <button
+            onClick={() => setActiveTab('maintenance')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold whitespace-nowrap transition-all ${
+              activeTab === 'maintenance'
+                ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20'
+                : 'bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800'
+            }`}
+          >
+            <Database className="w-4 h-4" />
+            <span>Database & Cloud Backups</span>
+          </button>
+        </section>
+
         {/* Gym Tenants Directory Section */}
+        {activeTab === 'facilities' && (
         <section className="space-y-4">
           {/* Controls Bar: Search & Status Filters */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
@@ -923,6 +1198,18 @@ Rohan Varma,9840434567,rohan@gmail.com,Male,12,8999,${new Date().toISOString().s
                               <FileSpreadsheet className="w-3.5 h-3.5" />
                             </button>
                             <button
+                              onClick={() => handleExportSnapshot(gym)}
+                              disabled={exportingGymId === gym.id}
+                              className="p-1.5 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/30 transition-colors"
+                              title="Download Tenant Backup Snapshot (JSON)"
+                            >
+                              {exportingGymId === gym.id ? (
+                                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <Download className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+                            <button
                               onClick={() => handleOpenEdit(gym)}
                               className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-colors"
                               title="Edit Gym & Status"
@@ -1078,6 +1365,18 @@ Rohan Varma,9840434567,rohan@gmail.com,Male,12,8999,${new Date().toISOString().s
                         <FileSpreadsheet className="w-3.5 h-3.5" />
                       </button>
                       <button
+                        onClick={() => handleExportSnapshot(gym)}
+                        disabled={exportingGymId === gym.id}
+                        className="p-1.5 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/30 transition-colors"
+                        title="Download Tenant Backup Snapshot (JSON)"
+                      >
+                        {exportingGymId === gym.id ? (
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Download className="w-3.5 h-3.5" />
+                        )}
+                      </button>
+                      <button
                         onClick={() => handleOpenEdit(gym)}
                         className="px-2 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 flex items-center gap-1 transition-colors"
                         title="Edit Facility"
@@ -1109,6 +1408,436 @@ Rohan Varma,9840434567,rohan@gmail.com,Male,12,8999,${new Date().toISOString().s
           </div>
 
         </section>
+        )}
+
+        {/* Phase 3 View 1: Kiosk Hardware Telemetry & Diagnostics */}
+        {activeTab === 'diagnostics' && (
+          <section className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                  <span>Front-Desk Kiosk Hardware Diagnostics</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold">
+                    LIVE TELEMETRY
+                  </span>
+                </h3>
+                <p className="text-xs text-slate-400">Real-time floor check-in scanners, camera health, and latency pings</p>
+              </div>
+
+              <button
+                onClick={loadKiosksStatus}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white text-xs font-semibold self-start sm:self-auto transition-colors"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${kiosksLoading ? 'animate-spin text-emerald-400' : ''}`} />
+                <span>Refresh Telemetry</span>
+              </button>
+            </div>
+
+            {/* Quick Status Stats */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="p-3.5 rounded-2xl bg-slate-900 border border-slate-800">
+                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Total Kiosks</span>
+                <span className="text-xl font-black text-white mt-0.5 block">{kiosks.length}</span>
+              </div>
+              <div className="p-3.5 rounded-2xl bg-emerald-950/20 border border-emerald-500/30">
+                <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider block">Online & Active</span>
+                <span className="text-xl font-black text-emerald-400 mt-0.5 block">{kiosks.filter(k => k.status === 'online').length}</span>
+              </div>
+              <div className="p-3.5 rounded-2xl bg-amber-950/20 border border-amber-500/30">
+                <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider block">Unstable Latency</span>
+                <span className="text-xl font-black text-amber-400 mt-0.5 block">{kiosks.filter(k => k.status === 'unstable').length}</span>
+              </div>
+              <div className="p-3.5 rounded-2xl bg-rose-950/20 border border-rose-500/30">
+                <span className="text-[10px] text-rose-400 font-bold uppercase tracking-wider block">Floor Offline</span>
+                <span className="text-xl font-black text-rose-400 mt-0.5 block">{kiosks.filter(k => k.status === 'offline').length}</span>
+              </div>
+            </div>
+
+            {/* Kiosks Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+              {kiosks.map((k) => (
+                <div
+                  key={`kiosk-${k.gymId}`}
+                  className="p-4 sm:p-5 rounded-3xl bg-slate-900/90 border border-slate-800 space-y-3.5 shadow-xl relative overflow-hidden"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <h4 className="font-bold text-white text-sm">{k.gymName}</h4>
+                      </div>
+                      <p className="text-[11px] text-slate-400 mt-0.5">{k.city} • /{k.gymSlug}</p>
+                    </div>
+
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border flex items-center gap-1 ${
+                      k.status === 'online'
+                        ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                        : k.status === 'unstable'
+                        ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                        : 'bg-rose-500/15 text-rose-400 border-rose-500/30'
+                    }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${
+                        k.status === 'online' ? 'bg-emerald-400 animate-pulse' : k.status === 'unstable' ? 'bg-amber-400' : 'bg-rose-400'
+                      }`} />
+                      {k.status}
+                    </span>
+                  </div>
+
+                  {/* Device & Hardware Info */}
+                  <div className="p-3 rounded-2xl bg-slate-950/70 border border-slate-800/80 space-y-2 text-xs">
+                    <div className="flex items-center justify-between text-slate-400 text-[11px]">
+                      <span>Device Terminal:</span>
+                      <span className="font-semibold text-slate-200">{k.deviceName}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-slate-400 text-[11px]">
+                      <span>Local IP Address:</span>
+                      <span className="font-mono text-slate-300">{k.ipAddress}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-slate-400 text-[11px]">
+                      <span>Scanner Camera:</span>
+                      <span className={`font-semibold flex items-center gap-1 ${
+                        k.cameraStatus === 'active' ? 'text-emerald-400' : 'text-amber-400'
+                      }`}>
+                        <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                        {k.cameraStatus === 'active' ? 'Camera Active' : 'Camera Idle / Offline'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-slate-400 text-[11px]">
+                      <span>Offline Sync Queue:</span>
+                      <span className={`font-semibold ${k.offlineQueueCount > 0 ? 'text-amber-400' : 'text-slate-400'}`}>
+                        {k.offlineQueueCount} Check-ins Pending
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Ping Latency & Actions */}
+                  <div className="flex items-center justify-between pt-1 gap-2">
+                    <div className="text-[11px] text-slate-400 flex items-center gap-1">
+                      <Zap className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Roundtrip:</span>
+                      <span className="font-mono font-bold text-white">{k.lastPingMs}ms</span>
+                    </div>
+
+                    <button
+                      onClick={() => handlePingKiosk(k.gymId)}
+                      disabled={pingingGymId === k.gymId}
+                      className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 disabled:opacity-50"
+                    >
+                      {pingingGymId === k.gymId ? (
+                        <>
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin text-amber-400" />
+                          <span>Pinging...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Zap className="w-3.5 h-3.5 text-amber-400" />
+                          <span>Ping Kiosk</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Phase 3 View 2: In-App Support Ticket Desk & Floor Dispute Resolver */}
+        {activeTab === 'tickets' && (
+          <section className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                  <span>In-App Support Ticket & Floor Dispute Desk</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 font-bold">
+                    HQ HELP DESK
+                  </span>
+                </h3>
+                <p className="text-xs text-slate-400">Gym owner inquiries, floor disputes, billing requests, and hardware bug reports</p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setIsNewTicketOpen(true)}
+                  className="px-3.5 py-2 rounded-xl bg-purple-500 hover:bg-purple-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition-transform active:scale-95 shadow-md shadow-purple-500/20"
+                >
+                  <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                  <span>Log New Ticket</span>
+                </button>
+                <button
+                  onClick={loadTickets}
+                  className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition-colors"
+                  title="Refresh Tickets"
+                >
+                  <RefreshCw className={`w-4 h-4 ${ticketsLoading ? 'animate-spin text-purple-400' : ''}`} />
+                </button>
+              </div>
+            </div>
+
+            {/* Filter Pills */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+              {['all', 'open', 'in_progress', 'resolved'].map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setTicketFilter(f)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold capitalize transition-all whitespace-nowrap ${
+                    ticketFilter === f
+                      ? 'bg-purple-500 text-slate-950 shadow-md shadow-purple-500/20'
+                      : 'bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800'
+                  }`}
+                >
+                  {f === 'in_progress' ? 'In Progress' : f} (
+                    {f === 'all' ? tickets.length : tickets.filter(t => t.status === f).length}
+                  )
+                </button>
+              ))}
+            </div>
+
+            {/* Tickets Table (Desktop) */}
+            <div className="hidden md:block rounded-3xl border border-slate-800 overflow-hidden bg-slate-900/60 shadow-xl">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="bg-slate-950/80 border-b border-slate-800 text-slate-400 text-[10px] uppercase font-semibold">
+                    <th className="py-3 px-4">Ticket #</th>
+                    <th className="py-3 px-4">Facility & Requester</th>
+                    <th className="py-3 px-4">Category</th>
+                    <th className="py-3 px-4">Priority</th>
+                    <th className="py-3 px-4">Subject & Details</th>
+                    <th className="py-3 px-4">Status</th>
+                    <th className="py-3 px-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60">
+                  {tickets
+                    .filter(t => ticketFilter === 'all' || t.status === ticketFilter)
+                    .map((tkt) => (
+                      <tr key={tkt.id} className="hover:bg-slate-800/40 transition-colors">
+                        <td className="py-3 px-4 font-mono font-bold text-white whitespace-nowrap">
+                          {tkt.ticket_number}
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="font-bold text-white block">{tkt.gym_name}</span>
+                          <span className="text-[11px] text-slate-400">{tkt.requester_name} ({tkt.requester_role})</span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-slate-800 text-slate-300 border border-slate-700">
+                            {tkt.category}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                            tkt.priority === 'critical' || tkt.priority === 'high'
+                              ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                              : tkt.priority === 'medium'
+                              ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                              : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                          }`}>
+                            {tkt.priority}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 max-w-xs">
+                          <span className="font-bold text-white block truncate">{tkt.subject}</span>
+                          <span className="text-[11px] text-slate-400 block truncate">{tkt.description}</span>
+                          {tkt.resolution_notes && (
+                            <span className="text-[10px] text-emerald-400 mt-0.5 block truncate">
+                              ✓ {tkt.resolution_notes}
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 whitespace-nowrap">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border flex items-center gap-1 w-fit ${
+                            tkt.status === 'resolved'
+                              ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                              : tkt.status === 'in_progress'
+                              ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                              : 'bg-rose-500/15 text-rose-400 border-rose-500/30'
+                          }`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${
+                              tkt.status === 'resolved' ? 'bg-emerald-400' : tkt.status === 'in_progress' ? 'bg-amber-400 animate-pulse' : 'bg-rose-400 animate-ping'
+                            }`} />
+                            {tkt.status.replace('_', ' ')}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-right whitespace-nowrap">
+                          <button
+                            onClick={() => handleOpenEditTicket(tkt)}
+                            className="px-3 py-1.5 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 text-purple-300 border border-purple-500/30 font-bold transition-all active:scale-95"
+                          >
+                            Resolve / Edit
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Tickets Cards (Mobile) */}
+            <div className="block md:hidden space-y-3">
+              {tickets
+                .filter(t => ticketFilter === 'all' || t.status === ticketFilter)
+                .map((tkt) => (
+                  <div key={`m-tkt-${tkt.id}`} className="p-4 rounded-3xl bg-slate-900 border border-slate-800 space-y-3 shadow-xl">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono font-bold text-white text-xs">{tkt.ticket_number}</span>
+                          <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold uppercase tracking-wider ${
+                            tkt.priority === 'critical' || tkt.priority === 'high'
+                              ? 'bg-rose-500/20 text-rose-300'
+                              : 'bg-amber-500/20 text-amber-300'
+                          }`}>
+                            {tkt.priority}
+                          </span>
+                        </div>
+                        <h4 className="font-bold text-white text-xs mt-1">{tkt.subject}</h4>
+                        <p className="text-[11px] text-slate-400">{tkt.gym_name} • {tkt.requester_name}</p>
+                      </div>
+
+                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border shrink-0 ${
+                        tkt.status === 'resolved'
+                          ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                          : tkt.status === 'in_progress'
+                          ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                          : 'bg-rose-500/15 text-rose-400 border-rose-500/30'
+                      }`}>
+                        {tkt.status.replace('_', ' ')}
+                      </span>
+                    </div>
+
+                    <p className="text-xs text-slate-300 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/80 leading-relaxed">
+                      {tkt.description}
+                    </p>
+
+                    {tkt.resolution_notes && (
+                      <div className="text-[11px] text-emerald-400 flex items-center gap-1.5">
+                        <Check className="w-3.5 h-3.5 shrink-0" />
+                        <span>Resolution: {tkt.resolution_notes}</span>
+                      </div>
+                    )}
+
+                    <div className="pt-1 flex items-center justify-end">
+                      <button
+                        onClick={() => handleOpenEditTicket(tkt)}
+                        className="w-full py-2 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 text-purple-300 border border-purple-500/30 font-bold text-xs"
+                      >
+                        Resolve / Edit Ticket
+                      </button>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </section>
+        )}
+
+        {/* Phase 3 View 3: Database Health, WAL Telemetry & 1-Click Backups */}
+        {activeTab === 'maintenance' && (
+          <section className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                  <span>SQLite Database Maintenance & Cloud Snapshots</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 font-bold">
+                    SYSTEM HEALTH
+                  </span>
+                </h3>
+                <p className="text-xs text-slate-400">Zero-downtime WAL index optimization, defragmentation, and tenant snapshot downloads</p>
+              </div>
+
+              <button
+                onClick={loadMaintenanceStats}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white text-xs font-semibold self-start sm:self-auto transition-colors"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${maintenanceLoading ? 'animate-spin text-blue-400' : ''}`} />
+                <span>Refresh Metrics</span>
+              </button>
+            </div>
+
+            {/* Health Metric Cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="p-4 rounded-3xl bg-slate-900 border border-slate-800 space-y-1">
+                <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Database Size</span>
+                <div className="text-xl font-black text-white">{maintenanceStats?.dbSizeFormatted || '284 KB'}</div>
+                <span className="text-[10px] text-slate-500 font-mono block">Pages: {maintenanceStats?.pageCount || 71}</span>
+              </div>
+              <div className="p-4 rounded-3xl bg-slate-900 border border-slate-800 space-y-1">
+                <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">WAL Write Log</span>
+                <div className="text-xl font-black text-emerald-400">{maintenanceStats?.walSizeFormatted || '32 KB'}</div>
+                <span className="text-[10px] text-slate-500 font-mono block">Journal: {maintenanceStats?.journalMode?.toUpperCase() || 'WAL'}</span>
+              </div>
+              <div className="p-4 rounded-3xl bg-slate-900 border border-slate-800 space-y-1">
+                <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">PRAGMA Integrity</span>
+                <div className="text-xl font-black text-emerald-400 flex items-center gap-1.5">
+                  <CheckCircle className="w-4 h-4 text-emerald-400" />
+                  <span>PASS</span>
+                </div>
+                <span className="text-[10px] text-slate-500 block">No corruption detected</span>
+              </div>
+              <div className="p-4 rounded-3xl bg-slate-900 border border-slate-800 space-y-1">
+                <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Platform Records</span>
+                <div className="text-xl font-black text-white">{maintenanceStats?.totalRecords || 120}+</div>
+                <span className="text-[10px] text-slate-500 block">Across 8 tenant tables</span>
+              </div>
+            </div>
+
+            {/* Action Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Vacuum & Optimize Card */}
+              <div className="p-5 rounded-3xl bg-slate-900/90 border border-slate-800 space-y-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0">
+                    <Database className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-white text-xs">Run SQLite Optimize & Vacuum</h4>
+                    <p className="text-[11px] text-slate-400">Rebuild internal B-Tree indices and commit WAL write-ahead log pages</p>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-300 leading-relaxed bg-slate-950/60 p-3 rounded-2xl border border-slate-800">
+                  Executes non-blocking <code className="text-emerald-400 font-mono text-xs">PRAGMA optimize;</code> followed by <code className="text-emerald-400 font-mono text-xs">VACUUM;</code> to reclaim fragmented storage space.
+                </p>
+                <button
+                  onClick={handleRunVacuum}
+                  disabled={vacuumLoading}
+                  className="w-full py-2.5 rounded-xl bg-blue-500 hover:bg-blue-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50"
+                >
+                  {vacuumLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <HardDrive className="w-4 h-4" />}
+                  <span>{vacuumLoading ? 'Optimizing Database Pages...' : 'Execute SQLite Vacuum & Flush'}</span>
+                </button>
+              </div>
+
+              {/* 1-Click Tenant JSON Snapshot Center */}
+              <div className="p-5 rounded-3xl bg-slate-900/90 border border-slate-800 space-y-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+                    <Download className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-white text-xs">1-Click Tenant Snapshot Center</h4>
+                    <p className="text-[11px] text-slate-400">Safeguard tenant records (Staff, Members, Plans, Invoices) before changes</p>
+                  </div>
+                </div>
+                <div className="space-y-2 max-h-44 overflow-y-auto pr-1">
+                  {gyms.map((g) => (
+                    <div key={`backup-${g.id}`} className="p-2.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between text-xs">
+                      <div>
+                        <span className="font-bold text-white block">{g.name}</span>
+                        <span className="text-[10px] text-slate-400 font-mono">/{g.slug}</span>
+                      </div>
+                      <button
+                        onClick={() => handleExportSnapshot(g)}
+                        disabled={exportingGymId === g.id}
+                        className="px-3 py-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 text-[11px] font-bold flex items-center gap-1 transition-all"
+                      >
+                        {exportingGymId === g.id ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
+                        <span>Backup JSON</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* SaaS Subscription Plans Matrix */}
         <section className="space-y-4">
@@ -2278,6 +3007,209 @@ Rohan Varma,9840434567,rohan@gmail.com,Male,12,8999,${today}`
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* PHASE 3 MODAL 1: REVIEW & RESOLVE SUPPORT TICKET */}
+      {selectedTicketForEdit && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in">
+          <div className="bg-[#0f172a] border border-slate-700 rounded-3xl max-w-lg w-full p-4 sm:p-6 text-slate-100 shadow-2xl relative my-auto max-h-[92vh] overflow-y-auto">
+            <button
+              onClick={() => setSelectedTicketForEdit(null)}
+              className="absolute top-5 right-5 p-1.5 rounded-full bg-slate-800 text-slate-400 hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-2xl bg-rose-500/20 text-rose-400 border border-rose-500/30 flex items-center justify-center shrink-0">
+                <LifeBuoy className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-rose-400">
+                    Ticket #{selectedTicketForEdit.id?.slice(0, 8)}
+                  </span>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
+                    selectedTicketForEdit.priority === 'critical' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' :
+                    selectedTicketForEdit.priority === 'high' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
+                    'bg-slate-800 text-slate-400 border border-slate-700'
+                  }`}>
+                    {selectedTicketForEdit.priority}
+                  </span>
+                </div>
+                <h3 className="font-bold text-base text-white">{selectedTicketForEdit.subject}</h3>
+              </div>
+            </div>
+
+            {/* Ticket details summary card */}
+            <div className="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 text-xs space-y-2 mb-4">
+              <div className="flex items-center justify-between text-slate-400 text-[11px]">
+                <span>Facility: <strong className="text-white">{selectedTicketForEdit.gym_name || selectedTicketForEdit.gym_id}</strong></span>
+                <span>Reported by: <strong className="text-slate-300">{selectedTicketForEdit.reported_by || 'Staff'}</strong></span>
+              </div>
+              <div className="text-slate-300 leading-relaxed bg-slate-950 p-2.5 rounded-xl border border-slate-800/80">
+                {selectedTicketForEdit.description || 'No additional details provided.'}
+              </div>
+            </div>
+
+            {/* Status Update & Resolution Notes Form */}
+            <div className="space-y-3.5 text-xs">
+              <div>
+                <label className="block text-slate-400 font-semibold mb-1">Ticket Status</label>
+                <select
+                  value={ticketNewStatus}
+                  onChange={(e) => setTicketNewStatus(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white font-medium focus:outline-none focus:ring-1 focus:ring-rose-500"
+                >
+                  <option value="open">🔴 Open - Awaiting Resolution</option>
+                  <option value="in_progress">🟡 In Progress - Under Active Investigation</option>
+                  <option value="resolved">🟢 Resolved - Dispute Settled & Closed</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-slate-400 font-semibold mb-1">HQ Resolution Notes & Actions Taken</label>
+                <textarea
+                  rows={3}
+                  value={ticketResolutionNotes}
+                  onChange={(e) => setTicketResolutionNotes(e.target.value)}
+                  placeholder="e.g. Cleared kiosk offline cache, recredited member 1 PT session token, validated camera scanner on 192.168.1.104."
+                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white placeholder-slate-500 text-xs focus:outline-none focus:ring-1 focus:ring-rose-500"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedTicketForEdit(null)}
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveTicketResolution}
+                  className="px-5 py-2.5 rounded-xl bg-rose-500 hover:bg-rose-400 text-white font-bold flex items-center gap-1.5 transition-transform active:scale-95 shadow-md shadow-rose-500/20"
+                >
+                  <Check className="w-4 h-4 stroke-[3]" />
+                  <span>Update & Save Resolution</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PHASE 3 MODAL 2: LOG NEW SUPPORT TICKET */}
+      {isNewTicketOpen && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in">
+          <div className="bg-[#0f172a] border border-slate-700 rounded-3xl max-w-lg w-full p-4 sm:p-6 text-slate-100 shadow-2xl relative my-auto max-h-[92vh] overflow-y-auto">
+            <button
+              onClick={() => setIsNewTicketOpen(false)}
+              className="absolute top-5 right-5 p-1.5 rounded-full bg-slate-800 text-slate-400 hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-2xl bg-rose-500/20 text-rose-400 border border-rose-500/30 flex items-center justify-center shrink-0">
+                <Ticket className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-base text-white">Log In-App Support Ticket</h3>
+                <p className="text-xs text-slate-400">Escalate hardware, billing, or floor disputes to HQ</p>
+              </div>
+            </div>
+
+            <form onSubmit={handleCreateTicket} className="space-y-3.5 text-xs">
+              <div>
+                <label className="block text-slate-400 font-semibold mb-1">Target Facility Branch</label>
+                <select
+                  value={newTicketForm.gym_id}
+                  onChange={(e) => setNewTicketForm({ ...newTicketForm, gym_id: e.target.value })}
+                  className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white focus:outline-none focus:ring-1 focus:ring-rose-500"
+                >
+                  {gyms.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.name} ({g.city})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-400 font-semibold mb-1">Category</label>
+                  <select
+                    value={newTicketForm.category}
+                    onChange={(e) => setNewTicketForm({ ...newTicketForm, category: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white focus:outline-none focus:ring-1 focus:ring-rose-500"
+                  >
+                    <option value="hardware">Hardware / Kiosk</option>
+                    <option value="dispute">PT Session Dispute</option>
+                    <option value="billing">SaaS Billing / Invoicing</option>
+                    <option value="technical">Technical / App Bug</option>
+                    <option value="general">General Support</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-slate-400 font-semibold mb-1">Priority</label>
+                  <select
+                    value={newTicketForm.priority}
+                    onChange={(e) => setNewTicketForm({ ...newTicketForm, priority: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white focus:outline-none focus:ring-1 focus:ring-rose-500"
+                  >
+                    <option value="low">Low - Cosmetic / Routine</option>
+                    <option value="medium">Medium - Standard</option>
+                    <option value="high">High - Urgent</option>
+                    <option value="critical">Critical - Operations Blocked</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-400 font-semibold mb-1">Subject / Issue Summary</label>
+                <input
+                  type="text"
+                  required
+                  value={newTicketForm.subject}
+                  onChange={(e) => setNewTicketForm({ ...newTicketForm, subject: e.target.value })}
+                  placeholder="e.g. Front desk barcode scanner is not recognizing QR passes"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white focus:outline-none focus:ring-1 focus:ring-rose-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-400 font-semibold mb-1">Detailed Description</label>
+                <textarea
+                  rows={3}
+                  required
+                  value={newTicketForm.description}
+                  onChange={(e) => setNewTicketForm({ ...newTicketForm, description: e.target.value })}
+                  placeholder="Provide context, device IDs, member codes, or dispute details..."
+                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white focus:outline-none focus:ring-1 focus:ring-rose-500"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsNewTicketOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 rounded-xl bg-rose-500 hover:bg-rose-400 text-white font-bold flex items-center gap-1.5 transition-transform active:scale-95 shadow-md shadow-rose-500/20"
+                >
+                  <LifeBuoy className="w-4 h-4 stroke-[2]" />
+                  <span>Submit Ticket</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

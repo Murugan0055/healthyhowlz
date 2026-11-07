@@ -1279,6 +1279,91 @@ export async function seedDatabase() {
     }
   }
 
+  // 13. Phase 3: Kiosk Telemetry Heartbeats & Support Tickets
+  const existingKiosks = await db.all('SELECT id FROM platform_kiosk_heartbeats');
+  if (existingKiosks.length === 0) {
+    const kiosks = [
+      { id: 'hb-1', gym_id: 'gym-gudiyatham', device_name: 'Front Desk Galaxy Tab S8', ip_address: '192.168.1.102', camera_status: 'active', offline_queue_count: 0, last_ping_ms: 18, status: 'online' },
+      { id: 'hb-2', gym_id: 'gym-vellore', device_name: 'Reception iPad Air 5', ip_address: '192.168.1.144', camera_status: 'active', offline_queue_count: 0, last_ping_ms: 24, status: 'online' },
+      { id: 'hb-3', gym_id: 'gym-chennai', device_name: 'Kiosk Windows Touch 10', ip_address: '192.168.1.88', camera_status: 'active', offline_queue_count: 1, last_ping_ms: 32, status: 'online' },
+      { id: 'hb-4', gym_id: 'gym-coimbatore', device_name: 'Front Desk Lenovo Tab M10', ip_address: '192.168.2.15', camera_status: 'idle', offline_queue_count: 0, last_ping_ms: 142, status: 'unstable' },
+      { id: 'hb-5', gym_id: 'gym-madurai', device_name: 'Reception Terminal 2', ip_address: '192.168.0.50', camera_status: 'offline', offline_queue_count: 3, last_ping_ms: 0, status: 'offline' }
+    ];
+    for (const k of kiosks) {
+      await db.run(
+        `INSERT INTO platform_kiosk_heartbeats (id, gym_id, device_name, ip_address, camera_status, offline_queue_count, last_ping_ms, status, last_seen_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '-5 minutes'))`,
+        [k.id, k.gym_id, k.device_name, k.ip_address, k.camera_status, k.offline_queue_count, k.last_ping_ms, k.status]
+      );
+    }
+  }
+
+  const existingTickets = await db.all('SELECT id FROM platform_support_tickets');
+  if (existingTickets.length === 0) {
+    const tickets = [
+      {
+        id: 'tkt-1',
+        ticket_number: 'TKT-2026-001',
+        gym_id: 'gym-gudiyatham',
+        gym_name: 'HealthyHowlz Elite (Gudiyatham HQ)',
+        requester_id: 'staff-owner',
+        requester_name: 'Karthik Raja',
+        requester_role: 'owner',
+        category: 'hardware',
+        priority: 'high',
+        subject: 'Front-Desk QR Scanner Auto-Focus Lag on iPad',
+        description: 'When morning rush starts at 6:30 AM, iPad camera takes 2-3 seconds to refocus on dark mode client QR passes.',
+        status: 'open',
+        assigned_to: 'HealthyHowlz HQ Admin',
+        resolution_notes: null
+      },
+      {
+        id: 'tkt-2',
+        ticket_number: 'TKT-2026-002',
+        gym_id: 'gym-coimbatore',
+        gym_name: 'HealthyHowlz Prime (Coimbatore Crosscut)',
+        requester_id: 'staff-owner-2',
+        requester_name: 'Suresh Natarajan',
+        requester_role: 'owner',
+        category: 'billing',
+        priority: 'medium',
+        subject: 'B2B GST Input Credit Invoice Copy Request',
+        description: 'Need quarterly consolidated B2B GST tax invoices with GSTIN 33AAAAE1234M1Z5 reflected for October.',
+        status: 'in_progress',
+        assigned_to: 'HealthyHowlz Billing Desk',
+        resolution_notes: 'Generated and sent to accountant email suresh@healthyhowlz.com'
+      },
+      {
+        id: 'tkt-3',
+        ticket_number: 'TKT-2026-003',
+        gym_id: 'gym-vellore',
+        gym_name: 'HealthyHowlz Club (Vellore East)',
+        requester_id: 'staff-owner',
+        requester_name: 'Karthik Raja',
+        requester_role: 'owner',
+        category: 'dispute',
+        priority: 'high',
+        subject: 'Reversal of Accidental PT Session Punch',
+        description: 'Coach Priya accidentally punched in client Rajesh Kannan twice on Nov 5. Need 1 session re-credited.',
+        status: 'resolved',
+        assigned_to: 'HealthyHowlz HQ Admin',
+        resolution_notes: 'Recredited 1 PT session to member ledger. Notified member via SMS.'
+      }
+    ];
+    for (const t of tickets) {
+      await db.run(
+        `INSERT INTO platform_support_tickets (
+          id, ticket_number, gym_id, gym_name, requester_id, requester_name, requester_role,
+          category, priority, subject, description, status, assigned_to, resolution_notes
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          t.id, t.ticket_number, t.gym_id, t.gym_name, t.requester_id, t.requester_name, t.requester_role,
+          t.category, t.priority, t.subject, t.description, t.status, t.assigned_to, t.resolution_notes
+        ]
+      );
+    }
+  }
+
   await db.run('PRAGMA foreign_keys = ON;');
 
   console.log('✅ Staff, Roles, Plans & Settings synced successfully!');
