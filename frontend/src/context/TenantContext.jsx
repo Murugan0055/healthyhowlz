@@ -29,7 +29,7 @@ export function TenantProvider({ children }) {
           ownerId = u.id || ownerId;
           role = u.role || role;
         }
-      } catch (e) {}
+      } catch (e) { }
 
       const gyms = await api.getAccessibleGyms(ownerId, role);
       setAvailableGyms(gyms || []);
@@ -94,8 +94,8 @@ export function useTenant() {
       currentGym: { id: 'gym-gudiyatham', name: 'HealthyHowlz Elite (Gudiyatham HQ)', city: 'Gudiyatham' },
       availableGyms: [],
       loadingGym: false,
-      switchGym: () => {},
-      refreshGymData: () => {},
+      switchGym: () => { },
+      refreshGymData: () => { },
       findGymByIdOrSlug: () => null
     };
   }

@@ -99,3 +99,4 @@ export async function enforceGymAuthorization(req, res, next) {
 
   next();
 }
+

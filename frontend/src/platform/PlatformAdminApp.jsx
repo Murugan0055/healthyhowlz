@@ -407,8 +407,8 @@ export default function PlatformAdminApp({ onLogout, onLaunchGym }) {
             </div>
           </div>
 
-          {/* 1. DESKTOP VIEW: Sleek Table (Visible on lg screens) */}
-          <div className="hidden lg:block rounded-3xl bg-slate-900/80 border border-slate-800 overflow-hidden shadow-xl">
+          {/* 1. DESKTOP VIEW: Sleek Table (Visible strictly on desktop screens >= 768px) */}
+          <div className="hidden md:block rounded-3xl bg-slate-900/80 border border-slate-800 overflow-hidden shadow-xl">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead>
@@ -418,7 +418,7 @@ export default function PlatformAdminApp({ onLogout, onLaunchGym }) {
                     <th className="py-3.5 px-4">Plan Tier</th>
                     <th className="py-3.5 px-4">Monthly Fee</th>
                     <th className="py-3.5 px-4">Members</th>
-                    <th className="py-3.5 px-4">Status & State</th>
+                    <th className="py-3.5 px-4">Status</th>
                     <th className="py-3.5 px-4 text-right">Actions</th>
                   </tr>
                 </thead>
@@ -497,26 +497,28 @@ export default function PlatformAdminApp({ onLogout, onLaunchGym }) {
                           </div>
                         </td>
 
-                        {/* Status Change Dropdown */}
+                        {/* Status Badge (Static Badge - Status modification only inside Edit popup) */}
                         <td className="py-4 px-4">
-                          <select
-                            value={gym.status}
-                            onChange={(e) => handleStatusChange(gym.id, e.target.value)}
-                            className={`px-2.5 py-1 rounded-xl text-[10px] font-bold uppercase tracking-wider border cursor-pointer focus:outline-none ${
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+                            gym.status === 'active'
+                              ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                              : gym.status === 'trial'
+                              ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                              : gym.status === 'suspended'
+                              ? 'bg-rose-500/15 text-rose-400 border-rose-500/30'
+                              : 'bg-slate-800 text-slate-400 border-slate-700'
+                          }`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${
                               gym.status === 'active'
-                                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                                ? 'bg-emerald-400 animate-pulse'
                                 : gym.status === 'trial'
-                                ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                                ? 'bg-amber-400'
                                 : gym.status === 'suspended'
-                                ? 'bg-rose-500/10 text-rose-400 border-rose-500/30'
-                                : 'bg-slate-800 text-slate-400 border-slate-700'
-                            }`}
-                          >
-                            <option value="active" className="bg-slate-900 text-emerald-400">ACTIVE</option>
-                            <option value="trial" className="bg-slate-900 text-amber-400">TRIAL</option>
-                            <option value="suspended" className="bg-slate-900 text-rose-400">SUSPENDED</option>
-                            <option value="inactive" className="bg-slate-900 text-slate-400">INACTIVE (SOFT-DELETED)</option>
-                          </select>
+                                ? 'bg-rose-400'
+                                : 'bg-slate-500'
+                            }`} />
+                            {gym.status || 'Active'}
+                          </span>
                         </td>
 
                         {/* Actions: Edit, Launch OS, Soft-Delete */}
@@ -525,7 +527,7 @@ export default function PlatformAdminApp({ onLogout, onLaunchGym }) {
                             <button
                               onClick={() => handleOpenEdit(gym)}
                               className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-colors"
-                              title="Edit Gym Details"
+                              title="Edit Gym & Status"
                             >
                               <Edit3 className="w-3.5 h-3.5" />
                             </button>
@@ -554,8 +556,8 @@ export default function PlatformAdminApp({ onLogout, onLaunchGym }) {
             </div>
           </div>
 
-          {/* 2. MOBILE & TABLET VIEW: Responsive Gym Cards (Visible on screens < lg) */}
-          <div className="block lg:hidden space-y-3">
+          {/* 2. MOBILE VIEW: Responsive Gym Cards (Visible strictly on mobile screens < md: 768px) */}
+          <div className="block md:hidden space-y-3">
             {filteredGyms.map((gym) => {
               const isKarthik = gym.owner_id === 'staff-owner';
               const gymRoute = `/${gym.slug || gym.id}`;
@@ -564,42 +566,64 @@ export default function PlatformAdminApp({ onLogout, onLaunchGym }) {
                   key={`card-${gym.id}`}
                   className="p-4 rounded-3xl bg-slate-900/90 border border-slate-800 space-y-3 shadow-xl"
                 >
-                  {/* Card Header: Icon, Name, Multi-Branch & City */}
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-2.5">
+                  {/* Card Header: Icon, Name, Multi-Branch & City + Static Status Pill & Route */}
+                  <div className="flex items-start justify-between gap-2.5">
+                    <div className="flex items-center gap-2.5 min-w-0">
                       <div className="w-10 h-10 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center text-emerald-400 font-bold shrink-0">
                         <Building2 className="w-5 h-5" />
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <h4 className="font-bold text-white text-sm flex items-center gap-1.5 flex-wrap">
-                          <span>{gym.name}</span>
+                          <span className="truncate">{gym.name}</span>
                           {isKarthik && (
-                            <span className="text-[9px] px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 font-bold">
+                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 font-bold shrink-0">
                               Multi-Branch
                             </span>
                           )}
                         </h4>
                         <p className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
-                          <MapPin className="w-3 h-3 text-slate-500" />
-                          {gym.city}, {gym.state || 'Tamil Nadu'}
+                          <MapPin className="w-3 h-3 text-slate-500 shrink-0" />
+                          <span className="truncate">{gym.city}, {gym.state || 'Tamil Nadu'}</span>
                         </p>
                       </div>
                     </div>
 
-                    {/* Dedicated URL badge */}
-                    <code className="text-[10px] text-emerald-400/90 font-mono bg-slate-950 px-2 py-0.5 rounded-lg border border-slate-800 shrink-0">
-                      {gymRoute}
-                    </code>
+                    {/* Status Pill & Route Slug in Header */}
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+                        gym.status === 'active'
+                          ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                          : gym.status === 'trial'
+                          ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                          : gym.status === 'suspended'
+                          ? 'bg-rose-500/15 text-rose-400 border-rose-500/30'
+                          : 'bg-slate-800 text-slate-400 border-slate-700'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${
+                          gym.status === 'active'
+                            ? 'bg-emerald-400 animate-pulse'
+                            : gym.status === 'trial'
+                            ? 'bg-amber-400'
+                            : gym.status === 'suspended'
+                            ? 'bg-rose-400'
+                            : 'bg-slate-500'
+                        }`} />
+                        {gym.status || 'Active'}
+                      </span>
+                      <code className="text-[10px] text-emerald-400/90 font-mono bg-slate-950 px-2 py-0.5 rounded-lg border border-slate-800">
+                        {gymRoute}
+                      </code>
+                    </div>
                   </div>
 
                   {/* Card Body: Owner & Plan Info */}
-                  <div className="grid grid-cols-2 gap-2 text-xs pt-1 pb-1 border-y border-slate-800/80">
+                  <div className="grid grid-cols-2 gap-2 text-xs pt-1.5 pb-1.5 border-y border-slate-800/80">
                     <div>
-                      <span className="text-[10px] text-slate-500 uppercase font-semibold block">Owner / Lead</span>
+                      <span className="text-[10px] text-slate-500 uppercase font-semibold block">Owner / Contact</span>
                       <p className="font-bold text-slate-200 truncate">{gym.owner_name}</p>
                       <a href={`tel:${gym.phone}`} className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5 hover:text-emerald-400">
-                        <Phone className="w-3 h-3 text-slate-500" />
-                        <span>{gym.phone || '+91 98401 23456'}</span>
+                        <Phone className="w-3 h-3 text-slate-500 shrink-0" />
+                        <span className="truncate">{gym.phone || '+91 98401 23456'}</span>
                       </a>
                     </div>
                     <div>
@@ -609,44 +633,21 @@ export default function PlatformAdminApp({ onLogout, onLaunchGym }) {
                         <span className="text-[10px] text-slate-500">/mo</span>
                       </div>
                       <div className="flex items-center gap-1 text-[11px] text-slate-400 mt-0.5">
-                        <Users className="w-3 h-3 text-slate-500" />
+                        <Users className="w-3 h-3 text-slate-500 shrink-0" />
                         <span>{gym.total_members || 0} Members</span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Card Footer: Status Dropdown & Action Buttons */}
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-1">
-                    {/* Status Dropdown */}
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-slate-500 font-semibold uppercase">Status:</span>
-                      <select
-                        value={gym.status}
-                        onChange={(e) => handleStatusChange(gym.id, e.target.value)}
-                        className={`px-2.5 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border cursor-pointer focus:outline-none flex-1 sm:flex-initial ${
-                          gym.status === 'active'
-                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                            : gym.status === 'trial'
-                            ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
-                            : gym.status === 'suspended'
-                            ? 'bg-rose-500/10 text-rose-400 border-rose-500/30'
-                            : 'bg-slate-800 text-slate-400 border-slate-700'
-                        }`}
-                      >
-                        <option value="active" className="bg-slate-900 text-emerald-400">ACTIVE</option>
-                        <option value="trial" className="bg-slate-900 text-amber-400">TRIAL</option>
-                        <option value="suspended" className="bg-slate-900 text-rose-400">SUSPENDED</option>
-                        <option value="inactive" className="bg-slate-900 text-slate-400">INACTIVE (SOFT-DELETED)</option>
-                      </select>
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="flex items-center gap-2 justify-end">
+                  {/* Card Footer: Clean Action Buttons (NO status dropdown - status updated in Edit popup) */}
+                  <div className="flex items-center justify-between gap-2 pt-1">
+                    <div className="flex items-center gap-1.5">
                       <button
                         onClick={() => handleOpenEdit(gym)}
-                        className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 flex items-center gap-1 transition-colors"
+                        className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 flex items-center gap-1.5 transition-colors"
+                        title="Edit Facility & Update Status"
                       >
-                        <Edit3 className="w-3.5 h-3.5" />
+                        <Edit3 className="w-3.5 h-3.5 text-slate-400" />
                         <span>Edit</span>
                       </button>
                       <button
@@ -656,14 +657,16 @@ export default function PlatformAdminApp({ onLogout, onLaunchGym }) {
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
-                      <button
-                        onClick={() => handleLaunchGym(gym)}
-                        className="px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center gap-1 transition-all shadow-sm shadow-emerald-500/20"
-                      >
-                        <span>Launch OS</span>
-                        <ArrowUpRight className="w-3.5 h-3.5" />
-                      </button>
                     </div>
+
+                    <button
+                      onClick={() => handleLaunchGym(gym)}
+                      className="px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center gap-1 transition-all shadow-sm shadow-emerald-500/20"
+                      title={`Launch into ${gym.name}`}
+                    >
+                      <span>Launch OS</span>
+                      <ArrowUpRight className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </div>
               );
@@ -887,16 +890,19 @@ export default function PlatformAdminApp({ onLogout, onLaunchGym }) {
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-400 font-semibold mb-1">Facility Status</label>
+                  <label className="block text-slate-400 font-semibold mb-1 flex items-center justify-between">
+                    <span>Facility Status *</span>
+                    <span className="text-[10px] text-emerald-400 font-bold">Editable</span>
+                  </label>
                   <select
                     value={editFormData.status}
                     onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}
-                    className="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    className="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white font-bold text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
                   >
-                    <option value="active">Active</option>
-                    <option value="trial">Trial</option>
-                    <option value="suspended">Suspended</option>
-                    <option value="inactive">Inactive (Soft Deleted)</option>
+                    <option value="active" className="text-emerald-400 bg-slate-900">Active (Full Access)</option>
+                    <option value="trial" className="text-amber-400 bg-slate-900">Trial (14-Day Evaluation)</option>
+                    <option value="suspended" className="text-rose-400 bg-slate-900">Suspended (Locked)</option>
+                    <option value="inactive" className="text-slate-400 bg-slate-900">Inactive (Soft Deleted)</option>
                   </select>
                 </div>
               </div>
